@@ -292,11 +292,11 @@
                 <!-- Forecast Tab -->
                 <div id="tab-forecast" class="stats-content hidden">
                     <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">Upcoming Reviews (Next 7 Days)</h3>
-                    <div class="grid grid-cols-7 gap-2">
+                    <div class="grid grid-cols-4 sm:grid-cols-7 gap-2">
                         {% for day in forecast %}
-                        <div class="text-center p-3 rounded-lg {% if day.count > 0 %}bg-primary-50 dark:bg-primary-900/30{% else %}bg-gray-50 dark:bg-gray-700/50{% endif %}">
+                        <div class="text-center p-2 sm:p-3 rounded-lg {% if day.count > 0 %}bg-primary-50 dark:bg-primary-900/30{% else %}bg-gray-50 dark:bg-gray-700/50{% endif %}">
                             <div class="text-xs text-gray-500 dark:text-gray-400">{{ day.day_name }}</div>
-                            <div class="text-lg font-semibold {% if day.count > 0 %}text-primary-600 dark:text-primary-400{% else %}text-gray-400 dark:text-gray-500{% endif %}">{{ day.count }}</div>
+                            <div class="text-base sm:text-lg font-semibold {% if day.count > 0 %}text-primary-600 dark:text-primary-400{% else %}text-gray-400 dark:text-gray-500{% endif %}">{{ day.count }}</div>
                         </div>
                         {% endfor %}
                     </div>

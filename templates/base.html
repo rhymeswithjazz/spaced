@@ -4,6 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Spaaaaaaced{% endblock %}</title>
+    {% load static %}
+    <!-- Favicons -->
+    <link rel="icon" type="image/svg+xml" href="{% static 'favicon.svg' %}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'favicon-32x32.png' %}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{% static 'favicon-16x16.png' %}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{% static 'apple-touch-icon.png' %}">
+    <link rel="manifest" href="{% static 'site.webmanifest' %}">
+    <link rel="shortcut icon" href="{% static 'favicon.ico' %}">
+    <meta name="theme-color" content="#0ea5e9">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
@@ -62,6 +71,22 @@
         * {
             transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
         }
+
+        /* Logo letter-spacing animation */
+        @keyframes expand-tracking {
+            0% {
+                letter-spacing: -0.02em;
+            }
+            100% {
+                letter-spacing: 0.4em;
+            }
+        }
+
+        .logo-text {
+            display: inline-block;
+            width: 10ch;
+            animation: expand-tracking 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
     </style>
     {% block extra_head %}{% endblock %}
 </head>
@@ -78,7 +103,7 @@
                             <rect x="4" y="4" width="16" height="24" rx="2" transform="rotate(10 4 28)" fill="currentColor" fill-opacity="0.4"/>
                             <rect x="4" y="4" width="16" height="24" rx="2" transform="rotate(32 4 28)" fill="currentColor"/>
                         </svg>
-                        <span class="text-2xl font-semibold tracking-ultra font-logo">spaced</span>
+                        <span class="text-2xl font-semibold font-logo logo-text">spaced</span>
                     </a>
                     <div class="hidden sm:ml-8 sm:flex sm:space-x-4">
                         <a href="{% url 'dashboard' %}" class="px-3 py-2 rounded-md text-sm font-medium {% if request.resolver_match.url_name == 'dashboard' %}bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300{% else %}text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700{% endif %}">
@@ -94,7 +119,7 @@
                 </div>
                 <div class="flex items-center space-x-4">
                     <!-- Theme Toggle -->
-                    <button id="theme-toggle" type="button" class="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500">
+                    <button id="theme-toggle" type="button" class="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 hidden sm:block">
                         <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                             <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
                         </svg>
@@ -103,8 +128,8 @@
                         </svg>
                     </button>
 
-                    <!-- User Menu -->
-                    <div class="relative" x-data="{ open: false }">
+                    <!-- User Menu (desktop) -->
+                    <div class="relative hidden sm:block" x-data="{ open: false }">
                         <button id="user-menu-button" class="flex items-center space-x-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
                             <span>{{ user.username }}</span>
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -119,16 +144,52 @@
                             </form>
                         </div>
                     </div>
+
+                    <!-- Mobile menu button -->
+                    <button id="mobile-menu-button" type="button" class="sm:hidden p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500">
+                        <span class="sr-only">Open main menu</span>
+                        <!-- Hamburger icon -->
+                        <svg id="mobile-menu-icon-open" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                        <!-- Close icon -->
+                        <svg id="mobile-menu-icon-close" class="hidden w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
                 </div>
             </div>
         </div>
 
-        <!-- Mobile menu -->
-        <div class="sm:hidden border-t border-gray-200 dark:border-gray-700">
+        <!-- Mobile menu (hidden by default) -->
+        <div id="mobile-menu" class="hidden sm:hidden border-t border-gray-200 dark:border-gray-700">
             <div class="px-2 pt-2 pb-3 space-y-1">
-                <a href="{% url 'dashboard' %}" class="block px-3 py-2 rounded-md text-base font-medium {% if request.resolver_match.url_name == 'dashboard' %}bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300{% else %}text-gray-600 dark:text-gray-300{% endif %}">Dashboard</a>
-                <a href="{% url 'deck_list' %}" class="block px-3 py-2 rounded-md text-base font-medium {% if 'deck' in request.resolver_match.url_name %}bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300{% else %}text-gray-600 dark:text-gray-300{% endif %}">Decks</a>
-                <a href="{% url 'review_session' %}" class="block px-3 py-2 rounded-md text-base font-medium {% if request.resolver_match.url_name == 'review_session' %}bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300{% else %}text-gray-600 dark:text-gray-300{% endif %}">Review</a>
+                <a href="{% url 'dashboard' %}" class="block px-3 py-2 rounded-md text-base font-medium {% if request.resolver_match.url_name == 'dashboard' %}bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300{% else %}text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700{% endif %}">Dashboard</a>
+                <a href="{% url 'deck_list' %}" class="block px-3 py-2 rounded-md text-base font-medium {% if 'deck' in request.resolver_match.url_name %}bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300{% else %}text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700{% endif %}">Decks</a>
+                <a href="{% url 'review_session' %}" class="block px-3 py-2 rounded-md text-base font-medium {% if request.resolver_match.url_name == 'review_session' %}bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300{% else %}text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700{% endif %}">Review</a>
+            </div>
+            <div class="border-t border-gray-200 dark:border-gray-700 pt-4 pb-3">
+                <div class="px-4 flex items-center justify-between">
+                    <div class="flex items-center">
+                        <div class="text-base font-medium text-gray-800 dark:text-white">{{ user.username }}</div>
+                    </div>
+                    <!-- Mobile theme toggle -->
+                    <button id="mobile-theme-toggle" type="button" class="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
+                        <svg id="mobile-theme-toggle-dark-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
+                        </svg>
+                        <svg id="mobile-theme-toggle-light-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" fill-rule="evenodd" clip-rule="evenodd"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="mt-3 px-2 space-y-1">
+                    <a href="{% url 'settings' %}" class="block px-3 py-2 rounded-md text-base font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Settings</a>
+                    <form method="post" action="{% url 'logout' %}">
+                        {% csrf_token %}
+                        <button type="submit" class="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Sign out</button>
+                    </form>
+                </div>
             </div>
         </div>
     </nav>
@@ -153,14 +214,31 @@
         const themeToggleBtn = document.getElementById('theme-toggle');
         const themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');
         const themeToggleLightIcon = document.getElementById('theme-toggle-light-icon');
+        const mobileThemeToggleBtn = document.getElementById('mobile-theme-toggle');
+        const mobileThemeToggleDarkIcon = document.getElementById('mobile-theme-toggle-dark-icon');
+        const mobileThemeToggleLightIcon = document.getElementById('mobile-theme-toggle-light-icon');
 
         function updateThemeIcons() {
-            if (document.documentElement.classList.contains('dark')) {
-                themeToggleLightIcon.classList.remove('hidden');
-                themeToggleDarkIcon.classList.add('hidden');
-            } else {
-                themeToggleDarkIcon.classList.remove('hidden');
-                themeToggleLightIcon.classList.add('hidden');
+            const isDark = document.documentElement.classList.contains('dark');
+            // Desktop icons
+            if (themeToggleLightIcon && themeToggleDarkIcon) {
+                if (isDark) {
+                    themeToggleLightIcon.classList.remove('hidden');
+                    themeToggleDarkIcon.classList.add('hidden');
+                } else {
+                    themeToggleDarkIcon.classList.remove('hidden');
+                    themeToggleLightIcon.classList.add('hidden');
+                }
+            }
+            // Mobile icons
+            if (mobileThemeToggleLightIcon && mobileThemeToggleDarkIcon) {
+                if (isDark) {
+                    mobileThemeToggleLightIcon.classList.remove('hidden');
+                    mobileThemeToggleDarkIcon.classList.add('hidden');
+                } else {
+                    mobileThemeToggleDarkIcon.classList.remove('hidden');
+                    mobileThemeToggleLightIcon.classList.add('hidden');
+                }
             }
         }
 
@@ -187,11 +265,34 @@
         // Initialize icons
         updateThemeIcons();
 
-        // Toggle handler
+        // Desktop theme toggle handler
         if (themeToggleBtn) {
             themeToggleBtn.addEventListener('click', function() {
                 const isDark = document.documentElement.classList.contains('dark');
                 setTheme(isDark ? 'light' : 'dark');
+            });
+        }
+
+        // Mobile theme toggle handler
+        if (mobileThemeToggleBtn) {
+            mobileThemeToggleBtn.addEventListener('click', function() {
+                const isDark = document.documentElement.classList.contains('dark');
+                setTheme(isDark ? 'light' : 'dark');
+            });
+        }
+
+        // Mobile menu toggle
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const mobileMenu = document.getElementById('mobile-menu');
+        const mobileMenuIconOpen = document.getElementById('mobile-menu-icon-open');
+        const mobileMenuIconClose = document.getElementById('mobile-menu-icon-close');
+
+        if (mobileMenuButton && mobileMenu) {
+            mobileMenuButton.addEventListener('click', function() {
+                const isOpen = !mobileMenu.classList.contains('hidden');
+                mobileMenu.classList.toggle('hidden');
+                mobileMenuIconOpen.classList.toggle('hidden');
+                mobileMenuIconClose.classList.toggle('hidden');
             });
         }
 
