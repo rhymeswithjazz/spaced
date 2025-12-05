@@ -1208,3 +1208,696 @@ class ThemeAPITests(TestCase):
         self.assertEqual(response.status_code, 200)
         data = json.loads(response.content)
         self.assertIn('theme', data)
+
+
+# =============================================================================
+# Deck Import Tests
+# =============================================================================
+
+from io import BytesIO
+from django.core.files.uploadedfile import SimpleUploadedFile
+
+
+class DeckImportTests(TestCase):
+    """Tests for deck import functionality."""
+
+    def setUp(self):
+        self.client = Client()
+        self.user = User.objects.create_user(
+            username='testuser', password='testpass123'
+        )
+        self.client.login(username='testuser', password='testpass123')
+
+    def test_import_no_file_uploaded(self):
+        """Import should fail when no file is uploaded."""
+        response = self.client.post(reverse('deck_import'))
+        self.assertRedirects(response, reverse('deck_list'))
+        # Check for error message
+        messages = list(response.wsgi_request._messages)
+        self.assertTrue(any('select a file' in str(m).lower() for m in messages))
+
+    def test_import_non_json_file(self):
+        """Import should reject non-JSON files."""
+        file = SimpleUploadedFile('deck.txt', b'not json', content_type='text/plain')
+        response = self.client.post(reverse('deck_import'), {'deck_file': file})
+        self.assertRedirects(response, reverse('deck_list'))
+        messages = list(response.wsgi_request._messages)
+        self.assertTrue(any('json file' in str(m).lower() for m in messages))
+
+    def test_import_invalid_json_content(self):
+        """Import should handle malformed JSON."""
+        file = SimpleUploadedFile('deck.json', b'{ invalid json }', content_type='application/json')
+        response = self.client.post(reverse('deck_import'), {'deck_file': file})
+        self.assertRedirects(response, reverse('deck_list'))
+        messages = list(response.wsgi_request._messages)
+        self.assertTrue(any('invalid json' in str(m).lower() for m in messages))
+
+    def test_import_missing_name_field(self):
+        """Import should fail when name field is missing."""
+        data = {'cards': []}
+        file = SimpleUploadedFile(
+            'deck.json',
+            json.dumps(data).encode('utf-8'),
+            content_type='application/json'
+        )
+        response = self.client.post(reverse('deck_import'), {'deck_file': file})
+        self.assertRedirects(response, reverse('deck_list'))
+        messages = list(response.wsgi_request._messages)
+        self.assertTrue(any('missing "name"' in str(m).lower() for m in messages))
+
+    def test_import_missing_cards_field(self):
+        """Import should fail when cards field is missing."""
+        data = {'name': 'Test Deck'}
+        file = SimpleUploadedFile(
+            'deck.json',
+            json.dumps(data).encode('utf-8'),
+            content_type='application/json'
+        )
+        response = self.client.post(reverse('deck_import'), {'deck_file': file})
+        self.assertRedirects(response, reverse('deck_list'))
+        messages = list(response.wsgi_request._messages)
+        self.assertTrue(any('cards' in str(m).lower() for m in messages))
+
+    def test_import_cards_not_a_list(self):
+        """Import should fail when cards is not a list."""
+        data = {'name': 'Test Deck', 'cards': 'not a list'}
+        file = SimpleUploadedFile(
+            'deck.json',
+            json.dumps(data).encode('utf-8'),
+            content_type='application/json'
+        )
+        response = self.client.post(reverse('deck_import'), {'deck_file': file})
+        self.assertRedirects(response, reverse('deck_list'))
+        messages = list(response.wsgi_request._messages)
+        self.assertTrue(any('cards' in str(m).lower() for m in messages))
+
+    def test_import_duplicate_deck_name_renames(self):
+        """Import should rename deck if name already exists."""
+        # Create existing deck with same name
+        Deck.objects.create(name='Imported Deck', owner=self.user)
+
+        data = {
+            'name': 'Imported Deck',
+            'cards': [{'front': 'Q1', 'back': 'A1'}]
+        }
+        file = SimpleUploadedFile(
+            'deck.json',
+            json.dumps(data).encode('utf-8'),
+            content_type='application/json'
+        )
+        response = self.client.post(reverse('deck_import'), {'deck_file': file})
+
+        # Should create deck with "(1)" suffix
+        self.assertTrue(Deck.objects.filter(name='Imported Deck (1)', owner=self.user).exists())
+
+    def test_import_duplicate_name_increments_counter(self):
+        """Import should increment counter for multiple duplicates."""
+        # Create existing decks
+        Deck.objects.create(name='Test', owner=self.user)
+        Deck.objects.create(name='Test (1)', owner=self.user)
+
+        data = {
+            'name': 'Test',
+            'cards': [{'front': 'Q1', 'back': 'A1'}]
+        }
+        file = SimpleUploadedFile(
+            'deck.json',
+            json.dumps(data).encode('utf-8'),
+            content_type='application/json'
+        )
+        response = self.client.post(reverse('deck_import'), {'deck_file': file})
+
+        # Should create deck with "(2)" suffix
+        self.assertTrue(Deck.objects.filter(name='Test (2)', owner=self.user).exists())
+
+    def test_import_invalid_card_type_defaults_to_basic(self):
+        """Import should default invalid card_type to 'basic'."""
+        data = {
+            'name': 'Type Test',
+            'cards': [{'front': 'Q1', 'back': 'A1', 'card_type': 'invalid_type'}]
+        }
+        file = SimpleUploadedFile(
+            'deck.json',
+            json.dumps(data).encode('utf-8'),
+            content_type='application/json'
+        )
+        response = self.client.post(reverse('deck_import'), {'deck_file': file})
+
+        deck = Deck.objects.get(name='Type Test', owner=self.user)
+        card = deck.cards.first()
+        self.assertEqual(card.card_type, 'basic')
+
+    def test_import_card_without_front_skipped(self):
+        """Import should skip cards without 'front' field."""
+        data = {
+            'name': 'Skip Test',
+            'cards': [
+                {'front': 'Valid Q', 'back': 'Valid A'},
+                {'back': 'No front field'},  # Missing 'front'
+                {'front': 'Another valid', 'back': 'Answer'}
+            ]
+        }
+        file = SimpleUploadedFile(
+            'deck.json',
+            json.dumps(data).encode('utf-8'),
+            content_type='application/json'
+        )
+        response = self.client.post(reverse('deck_import'), {'deck_file': file})
+
+        deck = Deck.objects.get(name='Skip Test', owner=self.user)
+        self.assertEqual(deck.cards.count(), 2)  # Only 2 valid cards
+
+    def test_import_valid_cloze_card(self):
+        """Import should correctly set cloze card type."""
+        data = {
+            'name': 'Cloze Test',
+            'cards': [{'front': '{{c1::answer}}', 'back': '', 'card_type': 'cloze'}]
+        }
+        file = SimpleUploadedFile(
+            'deck.json',
+            json.dumps(data).encode('utf-8'),
+            content_type='application/json'
+        )
+        response = self.client.post(reverse('deck_import'), {'deck_file': file})
+
+        deck = Deck.objects.get(name='Cloze Test', owner=self.user)
+        card = deck.cards.first()
+        self.assertEqual(card.card_type, 'cloze')
+
+    def test_import_successful_redirect_to_deck(self):
+        """Successful import should redirect to deck detail."""
+        data = {
+            'name': 'Success Deck',
+            'description': 'A test deck',
+            'cards': [{'front': 'Q1', 'back': 'A1'}]
+        }
+        file = SimpleUploadedFile(
+            'deck.json',
+            json.dumps(data).encode('utf-8'),
+            content_type='application/json'
+        )
+        response = self.client.post(reverse('deck_import'), {'deck_file': file})
+
+        deck = Deck.objects.get(name='Success Deck', owner=self.user)
+        self.assertRedirects(response, reverse('deck_detail', kwargs={'pk': deck.pk}))
+
+    def test_import_preserves_description(self):
+        """Import should preserve deck description."""
+        data = {
+            'name': 'Desc Test',
+            'description': 'My description',
+            'cards': [{'front': 'Q1', 'back': 'A1'}]
+        }
+        file = SimpleUploadedFile(
+            'deck.json',
+            json.dumps(data).encode('utf-8'),
+            content_type='application/json'
+        )
+        response = self.client.post(reverse('deck_import'), {'deck_file': file})
+
+        deck = Deck.objects.get(name='Desc Test', owner=self.user)
+        self.assertEqual(deck.description, 'My description')
+
+    def test_import_card_without_card_type_defaults_to_basic(self):
+        """Import should default missing card_type to 'basic'."""
+        data = {
+            'name': 'No Type',
+            'cards': [{'front': 'Q1', 'back': 'A1'}]  # No card_type specified
+        }
+        file = SimpleUploadedFile(
+            'deck.json',
+            json.dumps(data).encode('utf-8'),
+            content_type='application/json'
+        )
+        response = self.client.post(reverse('deck_import'), {'deck_file': file})
+
+        deck = Deck.objects.get(name='No Type', owner=self.user)
+        card = deck.cards.first()
+        self.assertEqual(card.card_type, 'basic')
+
+    def test_import_preserves_notes(self):
+        """Import should preserve card notes."""
+        data = {
+            'name': 'Notes Test',
+            'cards': [{'front': 'Q1', 'back': 'A1', 'notes': 'My notes'}]
+        }
+        file = SimpleUploadedFile(
+            'deck.json',
+            json.dumps(data).encode('utf-8'),
+            content_type='application/json'
+        )
+        response = self.client.post(reverse('deck_import'), {'deck_file': file})
+
+        deck = Deck.objects.get(name='Notes Test', owner=self.user)
+        card = deck.cards.first()
+        self.assertEqual(card.notes, 'My notes')
+
+
+# =============================================================================
+# Dashboard Streak Tests
+# =============================================================================
+
+class DashboardStreakTests(TestCase):
+    """Tests for dashboard streak calculations."""
+
+    def setUp(self):
+        self.client = Client()
+        self.user = User.objects.create_user(
+            username='testuser', password='testpass123'
+        )
+        self.deck = Deck.objects.create(name='Test Deck', owner=self.user)
+        self.card = Card.objects.create(
+            deck=self.deck,
+            front='Test Q',
+            back='Test A'
+        )
+        self.client.login(username='testuser', password='testpass123')
+
+    def _create_review_on_date(self, date):
+        """Helper to create a review log on a specific date."""
+        review = ReviewLog.objects.create(
+            card=self.card,
+            quality=4,
+            ease_factor_before=2.5,
+            ease_factor_after=2.5,
+            interval_before=1,
+            interval_after=6
+        )
+        # Update the reviewed_at timestamp directly
+        ReviewLog.objects.filter(pk=review.pk).update(
+            reviewed_at=timezone.make_aware(datetime.combine(date, datetime.min.time()))
+        )
+        return review
+
+    def test_streak_with_no_reviews(self):
+        """Streak should be 0 with no review history."""
+        response = self.client.get(reverse('dashboard'))
+        self.assertEqual(response.context['streak'], 0)
+        self.assertEqual(response.context['longest_streak'], 0)
+
+    def test_streak_with_today_only(self):
+        """Streak should be 1 with only today's review."""
+        today = timezone.now().date()
+        self._create_review_on_date(today)
+
+        response = self.client.get(reverse('dashboard'))
+        self.assertEqual(response.context['streak'], 1)
+
+    def test_streak_consecutive_days(self):
+        """Streak should count consecutive days."""
+        today = timezone.now().date()
+        for i in range(5):
+            self._create_review_on_date(today - timedelta(days=i))
+
+        response = self.client.get(reverse('dashboard'))
+        self.assertEqual(response.context['streak'], 5)
+
+    def test_streak_breaks_on_gap(self):
+        """Streak should stop counting when there's a gap."""
+        today = timezone.now().date()
+        # Reviews today and yesterday
+        self._create_review_on_date(today)
+        self._create_review_on_date(today - timedelta(days=1))
+        # Gap on day 2, then review on day 3
+        self._create_review_on_date(today - timedelta(days=3))
+
+        response = self.client.get(reverse('dashboard'))
+        self.assertEqual(response.context['streak'], 2)  # Only today + yesterday
+
+    def test_streak_zero_if_no_review_today(self):
+        """Current streak should be 0 if no review today."""
+        today = timezone.now().date()
+        # Only reviews from yesterday and before
+        self._create_review_on_date(today - timedelta(days=1))
+        self._create_review_on_date(today - timedelta(days=2))
+
+        response = self.client.get(reverse('dashboard'))
+        self.assertEqual(response.context['streak'], 0)
+
+    def test_longest_streak_single_day(self):
+        """Longest streak should be 1 with single review day."""
+        today = timezone.now().date()
+        self._create_review_on_date(today - timedelta(days=10))
+
+        response = self.client.get(reverse('dashboard'))
+        self.assertEqual(response.context['longest_streak'], 1)
+
+    def test_longest_streak_with_gaps(self):
+        """Longest streak should find longest consecutive run."""
+        today = timezone.now().date()
+        # First streak: 3 days (days 20, 19, 18)
+        self._create_review_on_date(today - timedelta(days=20))
+        self._create_review_on_date(today - timedelta(days=19))
+        self._create_review_on_date(today - timedelta(days=18))
+        # Gap
+        # Second streak: 5 days (days 10, 9, 8, 7, 6)
+        self._create_review_on_date(today - timedelta(days=10))
+        self._create_review_on_date(today - timedelta(days=9))
+        self._create_review_on_date(today - timedelta(days=8))
+        self._create_review_on_date(today - timedelta(days=7))
+        self._create_review_on_date(today - timedelta(days=6))
+
+        response = self.client.get(reverse('dashboard'))
+        self.assertEqual(response.context['longest_streak'], 5)
+
+    def test_longest_streak_at_end_of_sequence(self):
+        """Longest streak at end of review dates should be detected."""
+        today = timezone.now().date()
+        # Short streak first
+        self._create_review_on_date(today - timedelta(days=30))
+        self._create_review_on_date(today - timedelta(days=29))
+        # Gap
+        # Longer streak at end (current)
+        self._create_review_on_date(today - timedelta(days=3))
+        self._create_review_on_date(today - timedelta(days=2))
+        self._create_review_on_date(today - timedelta(days=1))
+        self._create_review_on_date(today)
+
+        response = self.client.get(reverse('dashboard'))
+        self.assertEqual(response.context['longest_streak'], 4)
+
+    def test_multiple_reviews_same_day_count_once(self):
+        """Multiple reviews on same day should count as one day in streak."""
+        today = timezone.now().date()
+        # Multiple reviews today
+        self._create_review_on_date(today)
+        self._create_review_on_date(today)
+        self._create_review_on_date(today)
+        # One review yesterday
+        self._create_review_on_date(today - timedelta(days=1))
+
+        response = self.client.get(reverse('dashboard'))
+        self.assertEqual(response.context['streak'], 2)  # Not 4
+
+    def test_dashboard_shows_retention_rate(self):
+        """Dashboard should calculate retention rate correctly."""
+        # Create 4 reviews: 3 correct (quality >= 3), 1 wrong
+        for quality in [4, 5, 3, 2]:
+            ReviewLog.objects.create(
+                card=self.card,
+                quality=quality,
+                ease_factor_before=2.5,
+                ease_factor_after=2.5,
+                interval_before=1,
+                interval_after=6
+            )
+
+        response = self.client.get(reverse('dashboard'))
+        # 3 out of 4 = 75%
+        self.assertEqual(response.context['retention_rate'], 75.0)
+
+    def test_dashboard_card_maturity_classification(self):
+        """Dashboard should classify cards by maturity correctly."""
+        # New card (repetitions=0) - already exists from setUp
+        # Learning card (repetitions > 0, interval < 21)
+        learning_card = Card.objects.create(
+            deck=self.deck,
+            front='Learning',
+            repetitions=2,
+            interval=10
+        )
+        # Mature card (interval >= 21)
+        mature_card = Card.objects.create(
+            deck=self.deck,
+            front='Mature',
+            repetitions=5,
+            interval=30
+        )
+
+        response = self.client.get(reverse('dashboard'))
+        self.assertEqual(response.context['cards_new'], 1)
+        self.assertEqual(response.context['cards_learning'], 1)
+        self.assertEqual(response.context['cards_mature'], 1)
+
+
+# =============================================================================
+# Send Reminders Command Tests
+# =============================================================================
+
+from unittest.mock import patch, MagicMock
+from django.core.management import call_command
+from io import StringIO
+from cards.models import ReviewReminder
+
+
+class SendRemindersCommandTests(TestCase):
+    """Tests for the send_reminders management command."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123'
+        )
+        self.deck = Deck.objects.create(name='Test Deck', owner=self.user)
+        # Create a due card
+        self.card = Card.objects.create(
+            deck=self.deck,
+            front='Test Q',
+            back='Test A',
+            next_review=timezone.now() - timedelta(hours=1)
+        )
+        # Create reminder for user
+        self.reminder = ReviewReminder.objects.create(
+            user=self.user,
+            enabled=True,
+            frequency=ReviewReminder.Frequency.DAILY
+        )
+
+    def test_should_send_today_daily(self):
+        """Daily frequency should always return True."""
+        from cards.management.commands.send_reminders import Command
+        cmd = Command()
+        self.reminder.frequency = ReviewReminder.Frequency.DAILY
+
+        # Test all days of the week
+        for day in range(7):
+            result = cmd._should_send_today(self.reminder, day, timezone.now())
+            self.assertTrue(result, f"Daily should send on day {day}")
+
+    def test_should_send_today_weekly_monday(self):
+        """Weekly frequency should only return True on Monday (day 0)."""
+        from cards.management.commands.send_reminders import Command
+        cmd = Command()
+        self.reminder.frequency = ReviewReminder.Frequency.WEEKLY
+
+        # Monday should return True
+        self.assertTrue(cmd._should_send_today(self.reminder, 0, timezone.now()))
+
+        # Other days should return False
+        for day in range(1, 7):
+            self.assertFalse(
+                cmd._should_send_today(self.reminder, day, timezone.now()),
+                f"Weekly should not send on day {day}"
+            )
+
+    def test_should_send_today_custom_days(self):
+        """Custom frequency should only return True on specified days."""
+        from cards.management.commands.send_reminders import Command
+        cmd = Command()
+        self.reminder.frequency = ReviewReminder.Frequency.CUSTOM
+        self.reminder.custom_days = '0,2,4'  # Monday, Wednesday, Friday
+
+        # Should send on specified days
+        self.assertTrue(cmd._should_send_today(self.reminder, 0, timezone.now()))
+        self.assertTrue(cmd._should_send_today(self.reminder, 2, timezone.now()))
+        self.assertTrue(cmd._should_send_today(self.reminder, 4, timezone.now()))
+
+        # Should not send on other days
+        self.assertFalse(cmd._should_send_today(self.reminder, 1, timezone.now()))
+        self.assertFalse(cmd._should_send_today(self.reminder, 3, timezone.now()))
+        self.assertFalse(cmd._should_send_today(self.reminder, 5, timezone.now()))
+        self.assertFalse(cmd._should_send_today(self.reminder, 6, timezone.now()))
+
+    def test_should_send_today_custom_empty(self):
+        """Custom frequency with empty days should return False."""
+        from cards.management.commands.send_reminders import Command
+        cmd = Command()
+        self.reminder.frequency = ReviewReminder.Frequency.CUSTOM
+        self.reminder.custom_days = ''
+
+        for day in range(7):
+            self.assertFalse(cmd._should_send_today(self.reminder, day, timezone.now()))
+
+    def test_get_due_cards_count(self):
+        """Should count due cards for user."""
+        from cards.management.commands.send_reminders import Command
+        cmd = Command()
+
+        # One card is already due from setUp
+        self.assertEqual(cmd._get_due_cards_count(self.user), 1)
+
+        # Add another due card
+        Card.objects.create(
+            deck=self.deck,
+            front='Q2',
+            next_review=timezone.now() - timedelta(hours=2)
+        )
+        self.assertEqual(cmd._get_due_cards_count(self.user), 2)
+
+        # Add a not-due card (shouldn't be counted)
+        Card.objects.create(
+            deck=self.deck,
+            front='Q3',
+            next_review=timezone.now() + timedelta(days=1)
+        )
+        self.assertEqual(cmd._get_due_cards_count(self.user), 2)
+
+    def test_get_due_cards_count_other_user(self):
+        """Should only count cards belonging to the specified user."""
+        from cards.management.commands.send_reminders import Command
+        cmd = Command()
+
+        other_user = User.objects.create_user(
+            username='other', email='other@example.com', password='pass'
+        )
+        other_deck = Deck.objects.create(name='Other Deck', owner=other_user)
+        Card.objects.create(
+            deck=other_deck,
+            front='Other Q',
+            next_review=timezone.now() - timedelta(hours=1)
+        )
+
+        # Should still only see 1 card for original user
+        self.assertEqual(cmd._get_due_cards_count(self.user), 1)
+
+    @patch('cards.management.commands.send_reminders.send_mail')
+    def test_send_reminder_email(self, mock_send_mail):
+        """Should send email with correct content."""
+        from cards.management.commands.send_reminders import Command
+        cmd = Command()
+        cmd.stdout = StringIO()
+
+        cmd._send_reminder_email(self.user, 5)
+
+        mock_send_mail.assert_called_once()
+        call_args = mock_send_mail.call_args
+        self.assertIn('5 flashcards', call_args.kwargs['subject'])
+        self.assertIn('5 flashcards', call_args.kwargs['message'])
+        self.assertEqual(call_args.kwargs['recipient_list'], ['test@example.com'])
+
+    @patch('cards.management.commands.send_reminders.send_mail')
+    def test_send_reminder_email_singular(self, mock_send_mail):
+        """Should use singular 'flashcard' for count of 1."""
+        from cards.management.commands.send_reminders import Command
+        cmd = Command()
+        cmd.stdout = StringIO()
+
+        cmd._send_reminder_email(self.user, 1)
+
+        call_args = mock_send_mail.call_args
+        self.assertIn('1 flashcard to', call_args.kwargs['subject'])
+        self.assertNotIn('flashcards', call_args.kwargs['subject'])
+
+    @patch('cards.management.commands.send_reminders.send_mail')
+    def test_handle_sends_reminder(self, mock_send_mail):
+        """Handle should send reminders for enabled users with due cards."""
+        out = StringIO()
+        call_command('send_reminders', stdout=out)
+
+        mock_send_mail.assert_called_once()
+        self.assertIn('Sent 1 reminder', out.getvalue())
+
+        # Check that last_sent was updated
+        self.reminder.refresh_from_db()
+        self.assertIsNotNone(self.reminder.last_sent)
+
+    @patch('cards.management.commands.send_reminders.send_mail')
+    def test_handle_dry_run(self, mock_send_mail):
+        """Dry run should not send emails."""
+        out = StringIO()
+        call_command('send_reminders', '--dry-run', stdout=out)
+
+        mock_send_mail.assert_not_called()
+        self.assertIn('[DRY RUN]', out.getvalue())
+        self.assertIn('1 cards due', out.getvalue())
+
+    @patch('cards.management.commands.send_reminders.send_mail')
+    def test_handle_skips_disabled_reminders(self, mock_send_mail):
+        """Should skip users with disabled reminders."""
+        self.reminder.enabled = False
+        self.reminder.save()
+
+        out = StringIO()
+        call_command('send_reminders', stdout=out)
+
+        mock_send_mail.assert_not_called()
+        self.assertIn('Sent 0 reminder', out.getvalue())
+
+    @patch('cards.management.commands.send_reminders.send_mail')
+    def test_handle_skips_no_due_cards(self, mock_send_mail):
+        """Should skip users with no cards due."""
+        # Make the card not due
+        self.card.next_review = timezone.now() + timedelta(days=1)
+        self.card.save()
+
+        out = StringIO()
+        call_command('send_reminders', stdout=out)
+
+        mock_send_mail.assert_not_called()
+        self.assertIn('no cards due', out.getvalue())
+
+    @patch('cards.management.commands.send_reminders.send_mail')
+    def test_handle_skips_wrong_day_weekly(self, mock_send_mail):
+        """Should skip weekly reminders on non-Monday."""
+        self.reminder.frequency = ReviewReminder.Frequency.WEEKLY
+        self.reminder.save()
+
+        # Create a fake Tuesday datetime
+        # Start from a known Monday and add 1 day
+        base = timezone.make_aware(datetime(2025, 12, 1, 12, 0, 0))  # Monday Dec 1, 2025
+        tuesday = base + timedelta(days=1)
+
+        # Make the card due relative to this mocked time
+        self.card.next_review = tuesday - timedelta(hours=1)
+        self.card.save()
+
+        with patch('cards.management.commands.send_reminders.timezone.now', return_value=tuesday):
+            out = StringIO()
+            call_command('send_reminders', stdout=out)
+
+        mock_send_mail.assert_not_called()
+
+    @patch('cards.management.commands.send_reminders.send_mail')
+    def test_handle_sends_on_monday_weekly(self, mock_send_mail):
+        """Should send weekly reminders on Monday."""
+        self.reminder.frequency = ReviewReminder.Frequency.WEEKLY
+        self.reminder.save()
+
+        # Create a fake Monday datetime
+        monday = timezone.make_aware(datetime(2025, 12, 1, 12, 0, 0))  # Monday Dec 1, 2025
+
+        # Make the card due relative to this mocked time
+        self.card.next_review = monday - timedelta(hours=1)
+        self.card.save()
+
+        with patch('cards.management.commands.send_reminders.timezone.now', return_value=monday):
+            out = StringIO()
+            call_command('send_reminders', stdout=out)
+
+        mock_send_mail.assert_called_once()
+
+    @patch('cards.management.commands.send_reminders.send_mail')
+    def test_handle_multiple_users(self, mock_send_mail):
+        """Should handle multiple users with reminders."""
+        # Create second user with reminder and due cards
+        user2 = User.objects.create_user(
+            username='user2', email='user2@example.com', password='pass'
+        )
+        deck2 = Deck.objects.create(name='Deck 2', owner=user2)
+        Card.objects.create(
+            deck=deck2,
+            front='Q2',
+            next_review=timezone.now() - timedelta(hours=1)
+        )
+        ReviewReminder.objects.create(
+            user=user2,
+            enabled=True,
+            frequency=ReviewReminder.Frequency.DAILY
+        )
+
+        out = StringIO()
+        call_command('send_reminders', stdout=out)
+
+        self.assertEqual(mock_send_mail.call_count, 2)
+        self.assertIn('Sent 2 reminder', out.getvalue())
