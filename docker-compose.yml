@@ -1,0 +1,37 @@
+services:
+  web:
+    build: .
+    container_name: flashcard
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      # Persist SQLite database
+      - flashcard_data:/app/data
+      # Persist static files (optional, for custom themes)
+      - flashcard_static:/app/staticfiles
+    environment:
+      - SECRET_KEY=${SECRET_KEY:?Secret key is required}
+      - DEBUG=${DEBUG:-False}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1}
+      - TIME_ZONE=${TIME_ZONE:-UTC}
+      # Email settings (optional)
+      - EMAIL_BACKEND=${EMAIL_BACKEND:-django.core.mail.backends.console.EmailBackend}
+      - EMAIL_HOST=${EMAIL_HOST:-}
+      - EMAIL_PORT=${EMAIL_PORT:-587}
+      - EMAIL_USE_TLS=${EMAIL_USE_TLS:-True}
+      - EMAIL_HOST_USER=${EMAIL_HOST_USER:-}
+      - EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD:-}
+      - DEFAULT_FROM_EMAIL=${DEFAULT_FROM_EMAIL:-flashcard@localhost}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/admin/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  flashcard_data:
+    driver: local
+  flashcard_static:
+    driver: local
