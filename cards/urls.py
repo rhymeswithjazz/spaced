@@ -10,8 +10,9 @@ urlpatterns = [
     path('verification-sent/', views.verification_sent, name='verification_sent'),
     path('resend-verification/', views.ResendVerificationView.as_view(), name='resend_verification'),
 
-    # Dashboard
-    path('', views.dashboard, name='dashboard'),
+    # Landing & Dashboard
+    path('', views.landing, name='landing'),
+    path('dashboard/', views.dashboard, name='dashboard'),
 
     # Decks
     path('decks/', views.DeckListView.as_view(), name='deck_list'),

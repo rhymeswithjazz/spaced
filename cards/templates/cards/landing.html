@@ -1,0 +1,452 @@
+{% extends 'base.html' %}
+
+{% block title %}Spaced - Learn Smarter with Spaced Repetition{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* Gradient orbs */
+    .gradient-bg {
+        position: relative;
+        overflow: hidden;
+    }
+
+    .gradient-bg::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background:
+            radial-gradient(circle at 20% 20%, rgba(14, 165, 233, 0.15) 0%, transparent 50%),
+            radial-gradient(circle at 80% 80%, rgba(56, 189, 248, 0.1) 0%, transparent 50%),
+            radial-gradient(circle at 40% 60%, rgba(2, 132, 199, 0.08) 0%, transparent 40%);
+        animation: gradient-shift 15s ease-in-out infinite;
+        z-index: 0;
+    }
+
+    .dark .gradient-bg::before {
+        background:
+            radial-gradient(circle at 20% 20%, rgba(14, 165, 233, 0.2) 0%, transparent 50%),
+            radial-gradient(circle at 80% 80%, rgba(56, 189, 248, 0.15) 0%, transparent 50%),
+            radial-gradient(circle at 40% 60%, rgba(2, 132, 199, 0.1) 0%, transparent 40%);
+    }
+
+    @keyframes gradient-shift {
+        0%, 100% {
+            transform: translate(0, 0) rotate(0deg);
+        }
+        33% {
+            transform: translate(2%, 2%) rotate(1deg);
+        }
+        66% {
+            transform: translate(-1%, 1%) rotate(-1deg);
+        }
+    }
+
+    .gradient-bg > * {
+        position: relative;
+        z-index: 1;
+    }
+
+    /* Floating orbs */
+    .orb {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(60px);
+        opacity: 0.5;
+        animation: float 20s ease-in-out infinite;
+    }
+
+    .orb-1 {
+        width: 600px;
+        height: 600px;
+        background: linear-gradient(135deg, rgba(14, 165, 233, 0.3), rgba(56, 189, 248, 0.1));
+        top: -200px;
+        right: -200px;
+        animation-delay: 0s;
+    }
+
+    .orb-2 {
+        width: 400px;
+        height: 400px;
+        background: linear-gradient(135deg, rgba(2, 132, 199, 0.2), rgba(14, 165, 233, 0.1));
+        bottom: -100px;
+        left: -100px;
+        animation-delay: -5s;
+    }
+
+    .orb-3 {
+        width: 300px;
+        height: 300px;
+        background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(125, 211, 252, 0.1));
+        top: 40%;
+        left: 60%;
+        animation-delay: -10s;
+    }
+
+    .dark .orb {
+        opacity: 0.3;
+    }
+
+    @keyframes float {
+        0%, 100% {
+            transform: translate(0, 0) scale(1);
+        }
+        25% {
+            transform: translate(20px, -30px) scale(1.05);
+        }
+        50% {
+            transform: translate(-20px, 20px) scale(0.95);
+        }
+        75% {
+            transform: translate(30px, 10px) scale(1.02);
+        }
+    }
+
+    /* Mesh gradient for sections */
+    .mesh-gradient {
+        background-image:
+            radial-gradient(at 0% 0%, rgba(14, 165, 233, 0.1) 0px, transparent 50%),
+            radial-gradient(at 100% 100%, rgba(56, 189, 248, 0.1) 0px, transparent 50%);
+    }
+
+    .dark .mesh-gradient {
+        background-image:
+            radial-gradient(at 0% 0%, rgba(14, 165, 233, 0.15) 0px, transparent 50%),
+            radial-gradient(at 100% 100%, rgba(56, 189, 248, 0.1) 0px, transparent 50%);
+    }
+
+    /* Glass effect for cards */
+    .glass-card {
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .dark .glass-card {
+        background: rgba(17, 24, 39, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    /* Gradient text */
+    .gradient-text {
+        background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 50%, #0369a1 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .dark .gradient-text {
+        background: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 50%, #0284c7 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    /* Hero text animation - expands right only, width stays constant */
+    .hero-text-animate {
+        display: inline-block;
+        letter-spacing: 0;
+        margin-right: 0;
+        animation: letter-breathe 1.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.3s;
+    }
+
+    /* Negative margin compensates for letter-spacing growth, keeping total width constant */
+    /* "Everything" = 10 letters = 9 gaps. At 0.12em spacing: 9 * 0.12 = 1.08em added width */
+    @keyframes letter-breathe {
+        0%, 100% {
+            letter-spacing: 0;
+            margin-right: 0;
+        }
+        45% {
+            letter-spacing: 0.12em;
+            margin-right: -1.08em;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<div class="min-h-screen flex flex-col gradient-bg">
+    <!-- Floating orbs -->
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+    <!-- Navigation -->
+    <nav class="px-4 sm:px-6 lg:px-8 py-6">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center">
+                <svg class="w-10 h-10 text-primary-600" viewBox="0 0 40 44" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <rect x="4" y="4" width="16" height="24" rx="2" transform="rotate(-5 4 28)" fill="currentColor" fill-opacity="0.15"/>
+                    <rect x="4" y="4" width="16" height="24" rx="2" transform="rotate(10 4 28)" fill="currentColor" fill-opacity="0.4"/>
+                    <rect x="4" y="4" width="16" height="24" rx="2" transform="rotate(32 4 28)" fill="currentColor"/>
+                </svg>
+                <span class="text-2xl font-semibold font-logo logo-text">spaced</span>
+            </div>
+            <div class="flex items-center space-x-4">
+                <a href="{% url 'login' %}" class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium">
+                    Sign in
+                </a>
+                <a href="{% url 'register' %}" class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                    Get Started
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Content -->
+    <div class="flex-1 flex items-center">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
+            <div class="text-center">
+                <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900 dark:text-white tracking-tight">
+                    Remember <span class="hero-text-animate">Everything</span>
+                    <span class="block gradient-text">You Learn</span>
+                </h1>
+                <p class="mt-6 max-w-2xl mx-auto text-lg sm:text-xl text-gray-600 dark:text-gray-300">
+                    Stop forgetting what you study. Spaced uses science-backed spaced repetition to help you retain knowledge for the long term.
+                </p>
+                <div class="mt-10 flex flex-col sm:flex-row justify-center gap-4">
+                    <a href="{% url 'register' %}" class="inline-flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-primary-600 hover:bg-primary-700 transition-colors shadow-lg hover:shadow-xl">
+                        Start Learning Free
+                        <svg class="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                        </svg>
+                    </a>
+                    <a href="#how-it-works" class="inline-flex items-center justify-center px-8 py-3 border border-gray-300 dark:border-gray-600 text-base font-medium rounded-lg text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                        Learn How It Works
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scroll indicator -->
+    <div class="pb-8 text-center">
+        <a href="#features" class="inline-block animate-bounce text-gray-400 dark:text-gray-500">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/>
+            </svg>
+        </a>
+    </div>
+</div>
+
+<!-- Features Section -->
+<section id="features" class="py-20 bg-white dark:bg-gray-800 mesh-gradient">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-16">
+            <h2 class="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white">
+                Why Spaced Repetition Works
+            </h2>
+            <p class="mt-4 text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+                Based on decades of cognitive science research, spaced repetition optimizes when you review to maximize retention.
+            </p>
+        </div>
+
+        <div class="grid md:grid-cols-3 gap-8">
+            <!-- Feature 1 -->
+            <div class="glass-card rounded-2xl p-8 hover:scale-105 transition-transform duration-300">
+                <div class="w-12 h-12 bg-gradient-to-br from-primary-400 to-primary-600 rounded-xl flex items-center justify-center mb-6 shadow-lg">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-3">
+                    Defeat the Forgetting Curve
+                </h3>
+                <p class="text-gray-600 dark:text-gray-400">
+                    Without review, you forget 70% of new information within 24 hours. Spaced repetition interrupts this decay at the optimal moment.
+                </p>
+            </div>
+
+            <!-- Feature 2 -->
+            <div class="glass-card rounded-2xl p-8 hover:scale-105 transition-transform duration-300">
+                <div class="w-12 h-12 bg-gradient-to-br from-primary-400 to-primary-600 rounded-xl flex items-center justify-center mb-6 shadow-lg">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-3">
+                    Study Smarter, Not Harder
+                </h3>
+                <p class="text-gray-600 dark:text-gray-400">
+                    Focus your time on cards you're about to forget. Easy cards appear less frequently, hard cards more often.
+                </p>
+            </div>
+
+            <!-- Feature 3 -->
+            <div class="glass-card rounded-2xl p-8 hover:scale-105 transition-transform duration-300">
+                <div class="w-12 h-12 bg-gradient-to-br from-primary-400 to-primary-600 rounded-xl flex items-center justify-center mb-6 shadow-lg">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-3">
+                    Build Long-Term Memory
+                </h3>
+                <p class="text-gray-600 dark:text-gray-400">
+                    Transform short-term cramming into lasting knowledge. Cards you know well can be scheduled months apart.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- How It Works Section -->
+<section id="how-it-works" class="py-20 bg-gray-50 dark:bg-gray-900 relative overflow-hidden">
+    <!-- Subtle background accent -->
+    <div class="absolute inset-0 opacity-30 dark:opacity-20">
+        <div class="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-primary-200 to-transparent dark:from-primary-900 rounded-full blur-3xl"></div>
+        <div class="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-tr from-primary-100 to-transparent dark:from-primary-950 rounded-full blur-3xl"></div>
+    </div>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+        <div class="text-center mb-16">
+            <h2 class="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white">
+                How It Works
+            </h2>
+            <p class="mt-4 text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+                Three simple steps to supercharge your learning.
+            </p>
+        </div>
+
+        <div class="grid md:grid-cols-3 gap-8">
+            <!-- Step 1 -->
+            <div class="relative text-center md:text-left">
+                <div class="flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 text-white text-xl font-bold mb-6 mx-auto md:mx-0 shadow-lg shadow-primary-500/30">
+                    1
+                </div>
+                <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-3">
+                    Create Your Cards
+                </h3>
+                <p class="text-gray-600 dark:text-gray-400">
+                    Add flashcards with questions and answers. Use basic cards, cloze deletions, or reversible cards for flexible learning.
+                </p>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="relative text-center md:text-left">
+                <div class="flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 text-white text-xl font-bold mb-6 mx-auto md:mx-0 shadow-lg shadow-primary-500/30">
+                    2
+                </div>
+                <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-3">
+                    Review Daily
+                </h3>
+                <p class="text-gray-600 dark:text-gray-400">
+                    Spend just a few minutes each day reviewing cards that are due. Rate how well you remembered each one.
+                </p>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="relative text-center md:text-left">
+                <div class="flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 text-white text-xl font-bold mb-6 mx-auto md:mx-0 shadow-lg shadow-primary-500/30">
+                    3
+                </div>
+                <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-3">
+                    Watch Your Progress
+                </h3>
+                <p class="text-gray-600 dark:text-gray-400">
+                    Track your retention rate, study streaks, and watch cards graduate from "learning" to "mature" status.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Card Types Section -->
+<section class="py-20 bg-white dark:bg-gray-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-16">
+            <h2 class="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white">
+                Flexible Card Types
+            </h2>
+            <p class="mt-4 text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+                Create the perfect cards for any subject.
+            </p>
+        </div>
+
+        <div class="grid md:grid-cols-3 gap-8">
+            <!-- Basic Cards -->
+            <div class="border border-gray-200 dark:border-gray-700 rounded-2xl p-6">
+                <div class="bg-gray-100 dark:bg-gray-900 rounded-lg p-4 mb-4 font-mono text-sm">
+                    <div class="text-gray-500 dark:text-gray-400 mb-2">Front:</div>
+                    <div class="text-gray-900 dark:text-white">What is the capital of France?</div>
+                    <div class="border-t border-gray-300 dark:border-gray-600 my-3"></div>
+                    <div class="text-gray-500 dark:text-gray-400 mb-2">Back:</div>
+                    <div class="text-gray-900 dark:text-white">Paris</div>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Basic Cards</h3>
+                <p class="text-gray-600 dark:text-gray-400 text-sm">Simple question and answer format. Perfect for vocabulary, facts, and definitions.</p>
+            </div>
+
+            <!-- Cloze Deletions -->
+            <div class="border border-gray-200 dark:border-gray-700 rounded-2xl p-6">
+                <div class="bg-gray-100 dark:bg-gray-900 rounded-lg p-4 mb-4 font-mono text-sm">
+                    <div class="text-gray-500 dark:text-gray-400 mb-2">Template:</div>
+                    <div class="text-gray-900 dark:text-white">The mitochondria is the <span class="bg-primary-200 dark:bg-primary-800 px-1 rounded">[...]</span> of the cell.</div>
+                    <div class="border-t border-gray-300 dark:border-gray-600 my-3"></div>
+                    <div class="text-gray-500 dark:text-gray-400 mb-2">Answer:</div>
+                    <div class="text-gray-900 dark:text-white">powerhouse</div>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Cloze Deletions</h3>
+                <p class="text-gray-600 dark:text-gray-400 text-sm">Fill-in-the-blank style. Great for memorizing sentences, formulas, and quotes.</p>
+            </div>
+
+            <!-- Reversible Cards -->
+            <div class="border border-gray-200 dark:border-gray-700 rounded-2xl p-6">
+                <div class="bg-gray-100 dark:bg-gray-900 rounded-lg p-4 mb-4 font-mono text-sm">
+                    <div class="text-gray-500 dark:text-gray-400 mb-2">Card 1:</div>
+                    <div class="text-gray-900 dark:text-white">Hello → Bonjour</div>
+                    <div class="border-t border-gray-300 dark:border-gray-600 my-3"></div>
+                    <div class="text-gray-500 dark:text-gray-400 mb-2">Card 2:</div>
+                    <div class="text-gray-900 dark:text-white">Bonjour → Hello</div>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Reversible Cards</h3>
+                <p class="text-gray-600 dark:text-gray-400 text-sm">Automatically creates both directions. Ideal for language learning and bidirectional associations.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA Section -->
+<section class="py-20 bg-gradient-to-br from-primary-600 via-primary-700 to-primary-800 relative overflow-hidden">
+    <!-- Decorative elements -->
+    <div class="absolute inset-0 opacity-20">
+        <div class="absolute top-0 left-1/4 w-72 h-72 bg-white rounded-full blur-3xl"></div>
+        <div class="absolute bottom-0 right-1/4 w-96 h-96 bg-primary-400 rounded-full blur-3xl"></div>
+    </div>
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative">
+        <h2 class="text-3xl sm:text-4xl font-bold text-white mb-6">
+            Ready to Remember Everything?
+        </h2>
+        <p class="text-xl text-primary-100 mb-10">
+            Join thousands of learners who've transformed how they study. It's free to get started.
+        </p>
+        <a href="{% url 'register' %}" class="inline-flex items-center justify-center px-8 py-4 border border-transparent text-lg font-medium rounded-lg text-primary-700 bg-white hover:bg-primary-50 transition-all duration-300 shadow-xl hover:shadow-2xl hover:scale-105">
+            Create Your Free Account
+            <svg class="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+            </svg>
+        </a>
+    </div>
+</section>
+
+<!-- Footer -->
+<footer class="bg-gray-900 dark:bg-black py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex flex-col md:flex-row justify-between items-center">
+            <div class="flex items-center mb-4 md:mb-0">
+                <svg class="w-8 h-8 text-primary-500" viewBox="0 0 40 44" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <rect x="4" y="4" width="16" height="24" rx="2" transform="rotate(-5 4 28)" fill="currentColor" fill-opacity="0.15"/>
+                    <rect x="4" y="4" width="16" height="24" rx="2" transform="rotate(10 4 28)" fill="currentColor" fill-opacity="0.4"/>
+                    <rect x="4" y="4" width="16" height="24" rx="2" transform="rotate(32 4 28)" fill="currentColor"/>
+                </svg>
+                <span class="ml-2 text-xl font-semibold font-logo text-white">spaced</span>
+            </div>
+            <div class="text-gray-400 text-sm">
+                Built with the SM-2 spaced repetition algorithm.
+            </div>
+        </div>
+    </div>
+</footer>
+{% endblock %}

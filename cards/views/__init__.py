@@ -9,6 +9,7 @@ from .auth import (
     ResendVerificationView,
 )
 from .dashboard import dashboard
+from .landing import landing
 from .deck import (
     DeckListView,
     DeckCreateView,
@@ -32,6 +33,8 @@ __all__ = [
     'ResendVerificationView',
     # Dashboard
     'dashboard',
+    # Landing
+    'landing',
     # Deck
     'DeckListView',
     'DeckCreateView',
