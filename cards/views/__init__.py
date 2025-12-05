@@ -1,6 +1,13 @@
 """Views package for the cards app."""
 
-from .auth import LoginView, RegisterView, logout_view
+from .auth import (
+    LoginView,
+    RegisterView,
+    logout_view,
+    verification_sent,
+    verify_email,
+    ResendVerificationView,
+)
 from .dashboard import dashboard
 from .deck import (
     DeckListView,
@@ -20,6 +27,9 @@ __all__ = [
     'LoginView',
     'RegisterView',
     'logout_view',
+    'verification_sent',
+    'verify_email',
+    'ResendVerificationView',
     # Dashboard
     'dashboard',
     # Deck

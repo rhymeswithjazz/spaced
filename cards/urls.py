@@ -6,6 +6,9 @@ urlpatterns = [
     path('login/', views.LoginView.as_view(), name='login'),
     path('register/', views.RegisterView.as_view(), name='register'),
     path('logout/', views.logout_view, name='logout'),
+    path('verify-email/<str:token>/', views.verify_email, name='verify_email'),
+    path('verification-sent/', views.verification_sent, name='verification_sent'),
+    path('resend-verification/', views.ResendVerificationView.as_view(), name='resend_verification'),
 
     # Dashboard
     path('', views.dashboard, name='dashboard'),

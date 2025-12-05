@@ -843,15 +843,17 @@ class AuthViewTests(TestCase):
         self.assertRedirects(response, reverse('dashboard'))
 
     def test_register_success(self):
-        """Valid registration should create user and log them in."""
+        """Valid registration should create inactive user and redirect to verification page."""
         response = self.client.post(reverse('register'), {
             'username': 'newuser',
             'email': 'new@example.com',
             'password1': 'SecurePass123!',
             'password2': 'SecurePass123!',
         })
-        self.assertRedirects(response, reverse('dashboard'))
-        self.assertTrue(User.objects.filter(username='newuser').exists())
+        self.assertRedirects(response, reverse('verification_sent'))
+        user = User.objects.get(username='newuser')
+        self.assertFalse(user.is_active)
+        self.assertTrue(hasattr(user, 'email_verification'))
 
     def test_logout(self):
         """Logout should redirect to login page."""
@@ -1901,3 +1903,182 @@ class SendRemindersCommandTests(TestCase):
 
         self.assertEqual(mock_send_mail.call_count, 2)
         self.assertIn('Sent 2 reminder', out.getvalue())
+
+
+# =============================================================================
+# Email Verification Tests
+# =============================================================================
+
+class EmailVerificationModelTests(TestCase):
+    """Tests for EmailVerificationToken model."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123',
+            is_active=False
+        )
+
+    def test_create_for_user(self):
+        """Should create a verification token for a user."""
+        from .models import EmailVerificationToken
+        token = EmailVerificationToken.create_for_user(self.user)
+        self.assertIsNotNone(token.token)
+        self.assertEqual(token.user, self.user)
+        self.assertEqual(len(token.token), 43)  # Base64 URL-safe 32 bytes
+
+    def test_create_for_user_replaces_existing(self):
+        """Creating a new token should replace existing one."""
+        from .models import EmailVerificationToken
+        token1 = EmailVerificationToken.create_for_user(self.user)
+        token2 = EmailVerificationToken.create_for_user(self.user)
+        self.assertNotEqual(token1.token, token2.token)
+        self.assertEqual(EmailVerificationToken.objects.filter(user=self.user).count(), 1)
+
+    def test_is_expired_false_for_new_token(self):
+        """New token should not be expired."""
+        from .models import EmailVerificationToken
+        token = EmailVerificationToken.create_for_user(self.user)
+        self.assertFalse(token.is_expired())
+
+    def test_is_expired_true_after_24_hours(self):
+        """Token should be expired after 24 hours."""
+        from .models import EmailVerificationToken
+        token = EmailVerificationToken.create_for_user(self.user)
+        token.created_at = timezone.now() - timedelta(hours=25)
+        token.save()
+        self.assertTrue(token.is_expired())
+
+
+class EmailVerificationViewTests(TestCase):
+    """Tests for email verification views."""
+
+    def setUp(self):
+        self.client = Client()
+
+    def test_verification_sent_page_loads(self):
+        """Verification sent page should load."""
+        response = self.client.get(reverse('verification_sent'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Check your email')
+
+    @patch('cards.views.auth.send_mail')
+    def test_register_sends_verification_email(self, mock_send_mail):
+        """Registration should send verification email."""
+        self.client.post(reverse('register'), {
+            'username': 'newuser',
+            'email': 'new@example.com',
+            'password1': 'SecurePass123!',
+            'password2': 'SecurePass123!',
+        })
+        mock_send_mail.assert_called_once()
+        call_args = mock_send_mail.call_args
+        self.assertEqual(call_args[1]['recipient_list'], ['new@example.com'])
+        self.assertIn('verify', call_args[1]['subject'].lower())
+
+    def test_verify_email_activates_user(self):
+        """Clicking verification link should activate user."""
+        from .models import EmailVerificationToken
+        user = User.objects.create_user(
+            username='newuser',
+            email='new@example.com',
+            password='testpass123',
+            is_active=False
+        )
+        token = EmailVerificationToken.create_for_user(user)
+
+        response = self.client.get(reverse('verify_email', args=[token.token]))
+        self.assertRedirects(response, reverse('login'))
+
+        user.refresh_from_db()
+        self.assertTrue(user.is_active)
+        self.assertFalse(EmailVerificationToken.objects.filter(user=user).exists())
+
+    def test_verify_email_expired_token(self):
+        """Expired token should show expired page."""
+        from .models import EmailVerificationToken
+        user = User.objects.create_user(
+            username='newuser',
+            email='new@example.com',
+            password='testpass123',
+            is_active=False
+        )
+        token = EmailVerificationToken.create_for_user(user)
+        token.created_at = timezone.now() - timedelta(hours=25)
+        token.save()
+
+        response = self.client.get(reverse('verify_email', args=[token.token]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'expired')
+
+        user.refresh_from_db()
+        self.assertFalse(user.is_active)
+
+    def test_verify_email_invalid_token(self):
+        """Invalid token should return 404."""
+        response = self.client.get(reverse('verify_email', args=['invalid-token']))
+        self.assertEqual(response.status_code, 404)
+
+    def test_resend_verification_page_loads(self):
+        """Resend verification page should load."""
+        response = self.client.get(reverse('resend_verification'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'email')
+
+    @patch('cards.views.auth.send_mail')
+    def test_resend_verification_sends_email(self, mock_send_mail):
+        """Resend verification should send email to unverified user."""
+        user = User.objects.create_user(
+            username='newuser',
+            email='new@example.com',
+            password='testpass123',
+            is_active=False
+        )
+
+        response = self.client.post(reverse('resend_verification'), {
+            'email': 'new@example.com'
+        })
+        self.assertRedirects(response, reverse('verification_sent'))
+        mock_send_mail.assert_called_once()
+
+    @patch('cards.views.auth.send_mail')
+    def test_resend_verification_nonexistent_email(self, mock_send_mail):
+        """Resend with nonexistent email should not reveal account existence."""
+        response = self.client.post(reverse('resend_verification'), {
+            'email': 'nonexistent@example.com'
+        })
+        self.assertRedirects(response, reverse('verification_sent'))
+        mock_send_mail.assert_not_called()
+
+    @patch('cards.views.auth.send_mail')
+    def test_resend_verification_active_user(self, mock_send_mail):
+        """Resend for active user should not send email."""
+        User.objects.create_user(
+            username='activeuser',
+            email='active@example.com',
+            password='testpass123',
+            is_active=True
+        )
+
+        response = self.client.post(reverse('resend_verification'), {
+            'email': 'active@example.com'
+        })
+        self.assertRedirects(response, reverse('verification_sent'))
+        mock_send_mail.assert_not_called()
+
+    def test_inactive_user_cannot_login(self):
+        """Inactive user should not be able to login."""
+        User.objects.create_user(
+            username='inactiveuser',
+            email='inactive@example.com',
+            password='testpass123',
+            is_active=False
+        )
+
+        response = self.client.post(reverse('login'), {
+            'username': 'inactiveuser',
+            'password': 'testpass123',
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Please enter a correct username')

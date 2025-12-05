@@ -8,6 +8,7 @@ A self-hosted spaced repetition flashcard application built with Django. Designe
 - Create and organize flashcard decks
 - Multiple card types (Basic, Cloze deletion, Reverse)
 - SM-2 spaced repetition algorithm for optimal review scheduling
+- Email verification for new accounts
 - Email reminders for due reviews
 - Light/dark mode with system preference detection
 - SQLite database for simple deployment
@@ -49,7 +50,8 @@ Deck (name, description, owner)
 
 User
   ├── UserPreferences (theme, cards_per_session)
-  └── ReviewReminder (frequency, preferred_time)
+  ├── ReviewReminder (frequency, preferred_time)
+  └── EmailVerificationToken (token, created_at, expires after 24h)
 ```
 
 ### Card Types
@@ -90,7 +92,7 @@ flashcard/
 │   ├── cloze.py             # Cloze deletion parsing/rendering (pure functions)
 │   ├── admin.py             # Admin interface
 │   ├── context_processors.py # User theme context
-│   ├── tests.py             # Unit tests (121 tests, 92% coverage)
+│   ├── tests.py             # Unit tests (176 tests)
 │   ├── templates/cards/     # App templates
 │   └── management/commands/
 │       └── send_reminders.py
@@ -105,7 +107,7 @@ flashcard/
 
 ## Pages & Features
 
-- **Login/Register**: User authentication
+- **Login/Register**: User authentication with email verification
 - **Dashboard**: Overview stats with tabbed statistics panel
   - Progress tab: New/Learning/Mature cards, retention rate, struggling cards
   - Activity tab: Reviews today/week/month, current and best streaks
@@ -177,14 +179,25 @@ Recommended: Daily at user's preferred reminder time.
 
 ## Recent Major Changes
 
+### 2025-12-05 - Email Verification for New Accounts
+- **What**: Added email verification requirement for new user registrations
+- **Why**: Ensure users provide valid email addresses before activating accounts
+- **Impact**: New accounts are created with `is_active=False` until email is verified
+- **Features**:
+  - EmailVerificationToken model with 24-hour expiration
+  - Verification email sent on registration with unique token link
+  - Verification success activates account and redirects to login
+  - Expired token page with option to request new link
+  - Resend verification email page (doesn't reveal account existence)
+  - 14 new tests covering all verification flows
+
 ### 2025-12-05 - Views Refactoring & Comprehensive Test Suite
-- **What**: Split monolithic views.py into feature modules, added 121 unit tests
-- **Why**: Improve maintainability and ensure code quality with 92% test coverage
+- **What**: Split monolithic views.py into feature modules, added comprehensive test suite
+- **Why**: Improve maintainability and ensure code quality
 - **Impact**: Easier to navigate codebase, safer refactoring with test safety net
 - **Changes**:
   - Split 624-line `views.py` into 7 focused modules under `cards/views/`
   - Added comprehensive unit tests for SRS algorithm, cloze parsing, models, forms, and views
-  - Test coverage: 92% overall (up from 0%)
   - All pure functional modules (srs.py, cloze.py) at 92-98% coverage
   - All forms at 100% coverage
   - View integration tests for all CRUD operations and API endpoints

@@ -1,3 +1,5 @@
+import secrets
+
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
@@ -183,3 +185,26 @@ class UserPreferences(models.Model):
 
     def __str__(self):
         return f"Preferences for {self.user.username}"
+
+
+class EmailVerificationToken(models.Model):
+    """Token for verifying user email addresses."""
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='email_verification')
+    token = models.CharField(max_length=64, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Verification token for {self.user.username}"
+
+    @classmethod
+    def create_for_user(cls, user):
+        """Create a new verification token for a user, replacing any existing one."""
+        cls.objects.filter(user=user).delete()
+        token = secrets.token_urlsafe(32)
+        return cls.objects.create(user=user, token=token)
+
+    def is_expired(self):
+        """Check if the token has expired (24 hours)."""
+        from datetime import timedelta
+        return timezone.now() > self.created_at + timedelta(hours=24)
