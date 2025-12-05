@@ -30,8 +30,11 @@ RUN mkdir -p /app/data && \
 RUN uv run python manage.py collectstatic --noinput && \
     chmod -R 755 /app/staticfiles
 
+# Make entrypoint executable
+RUN chmod +x /app/entrypoint.sh
+
 # Expose port
 EXPOSE 8000
 
-# Run gunicorn
-CMD ["uv", "run", "gunicorn", "--bind", "0.0.0.0:8000", "--workers", "2", "config.wsgi:application"]
+# Run entrypoint (handles migrations + gunicorn)
+CMD ["/app/entrypoint.sh"]
