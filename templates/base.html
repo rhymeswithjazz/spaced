@@ -43,7 +43,19 @@
                         }
                     }
                 }
-            }
+            },
+            plugins: [
+                function({ addUtilities }) {
+                    addUtilities({
+                        '.animate-breathe': {
+                            display: 'inline-block',
+                            letterSpacing: '0',
+                            marginRight: '0',
+                            animation: 'letter-breathe 1.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.3s',
+                        }
+                    })
+                }
+            ]
         }
     </script>
     <script>
@@ -79,6 +91,18 @@
             }
             100% {
                 letter-spacing: 0.4em;
+            }
+        }
+
+        /* Letter breathe animation keyframes (used by Tailwind animate-breathe utility) */
+        @keyframes letter-breathe {
+            0%, 100% {
+                letter-spacing: 0;
+                margin-right: 0;
+            }
+            45% {
+                letter-spacing: 0.12em;
+                margin-right: -1.08em;
             }
         }
 
