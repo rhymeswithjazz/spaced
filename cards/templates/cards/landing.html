@@ -4,6 +4,12 @@
 
 {% block extra_head %}
 <style>
+    /* Static logo text (no animation on landing page) */
+    .logo-text-static {
+        display: inline-block;
+        letter-spacing: 0.4em;
+    }
+
     /* Gradient orbs */
     .gradient-bg {
         position: relative;
@@ -183,7 +189,7 @@
                     <rect x="4" y="4" width="16" height="24" rx="2" transform="rotate(10 4 28)" fill="currentColor" fill-opacity="0.4"/>
                     <rect x="4" y="4" width="16" height="24" rx="2" transform="rotate(32 4 28)" fill="currentColor"/>
                 </svg>
-                <span class="text-2xl font-semibold font-logo logo-text">spaced</span>
+                <span class="text-2xl font-semibold font-logo logo-text-static">spaced</span>
             </div>
             <div class="flex items-center space-x-4">
                 <a href="{% url 'login' %}" class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium">
