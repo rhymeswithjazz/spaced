@@ -1,0 +1,371 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Spaaaaaaced{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Welcome back, {{ user.username }}!</p>
+        </div>
+        {% if total_due > 0 %}
+        <a href="{% url 'review_session' %}" class="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            Start Review ({{ total_due }} due)
+        </a>
+        {% endif %}
+    </div>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <svg class="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Total Cards</dt>
+                            <dd class="text-lg font-semibold text-gray-900 dark:text-white">{{ total_cards }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <svg class="h-6 w-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Cards Due</dt>
+                            <dd class="text-lg font-semibold text-gray-900 dark:text-white">{{ total_due }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <svg class="h-6 w-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Study Streak</dt>
+                            <dd class="text-lg font-semibold text-gray-900 dark:text-white">{{ streak }} day{{ streak|pluralize }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <svg class="h-6 w-6 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Total Decks</dt>
+                            <dd class="text-lg font-semibold text-gray-900 dark:text-white">{{ decks|length }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Decks -->
+    <div>
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-medium text-gray-900 dark:text-white">Your Decks</h2>
+            <a href="{% url 'deck_create' %}" class="text-sm font-medium text-primary-600 hover:text-primary-500">
+                + New Deck
+            </a>
+        </div>
+
+        {% if decks %}
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {% for deck in decks %}
+            <div class="relative bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-md transition-shadow">
+                <a href="{% url 'deck_detail' deck.pk %}" class="block p-6">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white truncate">{{ deck.name }}</h3>
+                    {% if deck.description %}
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400 line-clamp-2">{{ deck.description }}</p>
+                    {% endif %}
+                    <div class="mt-4 flex items-center justify-between text-sm">
+                        <span class="text-gray-500 dark:text-gray-400">{{ deck.card_count }} card{{ deck.card_count|pluralize }}</span>
+                        {% if deck.due_count > 0 %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200">
+                            {{ deck.due_count }} due
+                        </span>
+                        {% else %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
+                            All caught up
+                        </span>
+                        {% endif %}
+                    </div>
+                </a>
+                {% if deck.due_count > 0 %}
+                <div class="absolute top-4 right-4">
+                    <a href="{% url 'review_deck' deck.pk %}" class="p-2 text-primary-600 hover:text-primary-700 dark:text-primary-400" title="Review this deck">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-12 bg-white dark:bg-gray-800 rounded-lg shadow">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+            </svg>
+            <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">No decks yet</h3>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Get started by creating your first deck.</p>
+            <div class="mt-6">
+                <a href="{% url 'deck_create' %}" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                    Create Deck
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Statistics Tabs -->
+    <div>
+        <h2 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Statistics</h2>
+        <div class="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
+            <!-- Tab Navigation -->
+            <div class="border-b border-gray-200 dark:border-gray-700">
+                <nav class="flex -mb-px" id="stats-tabs">
+                    <button data-tab="progress" class="stats-tab active flex-1 py-3 px-4 text-center text-sm font-medium border-b-2 border-primary-500 text-primary-600 dark:text-primary-400">
+                        Progress
+                    </button>
+                    <button data-tab="activity" class="stats-tab flex-1 py-3 px-4 text-center text-sm font-medium border-b-2 border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300">
+                        Activity
+                    </button>
+                    <button data-tab="forecast" class="stats-tab flex-1 py-3 px-4 text-center text-sm font-medium border-b-2 border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300">
+                        Forecast
+                    </button>
+                    <button data-tab="decks" class="stats-tab flex-1 py-3 px-4 text-center text-sm font-medium border-b-2 border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300">
+                        By Deck
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Tab Content -->
+            <div class="p-6">
+                <!-- Progress Tab -->
+                <div id="tab-progress" class="stats-content">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Card Status -->
+                        <div>
+                            <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">Card Status</h3>
+                            <div class="space-y-3">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center">
+                                        <span class="w-3 h-3 rounded-full bg-blue-500 mr-2"></span>
+                                        <span class="text-sm text-gray-700 dark:text-gray-300">New</span>
+                                    </div>
+                                    <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ cards_new }}</span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center">
+                                        <span class="w-3 h-3 rounded-full bg-yellow-500 mr-2"></span>
+                                        <span class="text-sm text-gray-700 dark:text-gray-300">Learning</span>
+                                    </div>
+                                    <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ cards_learning }}</span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center">
+                                        <span class="w-3 h-3 rounded-full bg-green-500 mr-2"></span>
+                                        <span class="text-sm text-gray-700 dark:text-gray-300">Mature</span>
+                                    </div>
+                                    <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ cards_mature }}</span>
+                                </div>
+                            </div>
+                            <!-- Progress Bar -->
+                            {% if total_cards > 0 %}
+                            <div class="mt-4 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden flex">
+                                {% widthratio cards_new total_cards 100 as new_pct %}
+                                {% widthratio cards_learning total_cards 100 as learning_pct %}
+                                {% widthratio cards_mature total_cards 100 as mature_pct %}
+                                <div class="bg-blue-500 h-full" style="width: {{ new_pct }}%"></div>
+                                <div class="bg-yellow-500 h-full" style="width: {{ learning_pct }}%"></div>
+                                <div class="bg-green-500 h-full" style="width: {{ mature_pct }}%"></div>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Performance -->
+                        <div>
+                            <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">Performance</h3>
+                            <div class="space-y-3">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-700 dark:text-gray-300">Retention Rate</span>
+                                    <span class="text-sm font-semibold {% if retention_rate >= 80 %}text-green-600 dark:text-green-400{% elif retention_rate >= 60 %}text-yellow-600 dark:text-yellow-400{% else %}text-red-600 dark:text-red-400{% endif %}">{{ retention_rate }}%</span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-700 dark:text-gray-300">Average Ease</span>
+                                    <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ avg_ease }}</span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-700 dark:text-gray-300">Struggling Cards</span>
+                                    <span class="text-sm font-semibold {% if struggling_cards > 0 %}text-red-600 dark:text-red-400{% else %}text-green-600 dark:text-green-400{% endif %}">{{ struggling_cards }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Activity Tab -->
+                <div id="tab-activity" class="stats-content hidden">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Review Counts -->
+                        <div>
+                            <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">Reviews Completed</h3>
+                            <div class="space-y-3">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-700 dark:text-gray-300">Today</span>
+                                    <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ reviews_today }}</span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-700 dark:text-gray-300">This Week</span>
+                                    <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ reviews_this_week }}</span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-700 dark:text-gray-300">This Month</span>
+                                    <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ reviews_this_month }}</span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-700 dark:text-gray-300">Daily Average (30d)</span>
+                                    <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ avg_reviews_per_day }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Streaks -->
+                        <div>
+                            <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">Study Streaks</h3>
+                            <div class="space-y-3">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-700 dark:text-gray-300">Current Streak</span>
+                                    <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ streak }} day{{ streak|pluralize }}</span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-700 dark:text-gray-300">Longest Streak</span>
+                                    <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ longest_streak }} day{{ longest_streak|pluralize }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Forecast Tab -->
+                <div id="tab-forecast" class="stats-content hidden">
+                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">Upcoming Reviews (Next 7 Days)</h3>
+                    <div class="grid grid-cols-7 gap-2">
+                        {% for day in forecast %}
+                        <div class="text-center p-3 rounded-lg {% if day.count > 0 %}bg-primary-50 dark:bg-primary-900/30{% else %}bg-gray-50 dark:bg-gray-700/50{% endif %}">
+                            <div class="text-xs text-gray-500 dark:text-gray-400">{{ day.day_name }}</div>
+                            <div class="text-lg font-semibold {% if day.count > 0 %}text-primary-600 dark:text-primary-400{% else %}text-gray-400 dark:text-gray-500{% endif %}">{{ day.count }}</div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <p class="mt-4 text-sm text-gray-500 dark:text-gray-400">
+                        Total upcoming: <span class="font-semibold">{% widthratio 1 1 0 as total_upcoming %}{% for day in forecast %}{% if not forloop.first %}{% with day.count as c %}{% endwith %}{% endif %}{% endfor %}{{ forecast|length }} days tracked</span>
+                    </p>
+                </div>
+
+                <!-- Decks Tab -->
+                <div id="tab-decks" class="stats-content hidden">
+                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">Per-Deck Statistics</h3>
+                    {% if deck_stats %}
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                            <thead>
+                                <tr>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Deck</th>
+                                    <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">New</th>
+                                    <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Learning</th>
+                                    <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Mature</th>
+                                    <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Retention</th>
+                                    <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Reviews</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                                {% for stat in deck_stats %}
+                                <tr>
+                                    <td class="px-3 py-3 text-sm font-medium text-gray-900 dark:text-white">{{ stat.deck.name }}</td>
+                                    <td class="px-3 py-3 text-sm text-center text-blue-600 dark:text-blue-400">{{ stat.new }}</td>
+                                    <td class="px-3 py-3 text-sm text-center text-yellow-600 dark:text-yellow-400">{{ stat.learning }}</td>
+                                    <td class="px-3 py-3 text-sm text-center text-green-600 dark:text-green-400">{{ stat.mature }}</td>
+                                    <td class="px-3 py-3 text-sm text-center {% if stat.retention >= 80 %}text-green-600 dark:text-green-400{% elif stat.retention >= 60 %}text-yellow-600 dark:text-yellow-400{% else %}text-red-600 dark:text-red-400{% endif %}">{{ stat.retention }}%</td>
+                                    <td class="px-3 py-3 text-sm text-center text-gray-500 dark:text-gray-400">{{ stat.total_reviews }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-sm text-gray-500 dark:text-gray-400">No decks yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        const tabs = document.querySelectorAll('.stats-tab');
+        const contents = document.querySelectorAll('.stats-content');
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                // Update tab styles
+                tabs.forEach(t => {
+                    t.classList.remove('active', 'border-primary-500', 'text-primary-600', 'dark:text-primary-400');
+                    t.classList.add('border-transparent', 'text-gray-500', 'dark:text-gray-400');
+                });
+                tab.classList.add('active', 'border-primary-500', 'text-primary-600', 'dark:text-primary-400');
+                tab.classList.remove('border-transparent', 'text-gray-500', 'dark:text-gray-400');
+
+                // Show corresponding content
+                const targetId = 'tab-' + tab.dataset.tab;
+                contents.forEach(content => {
+                    content.classList.toggle('hidden', content.id !== targetId);
+                });
+            });
+        });
+    })();
+    </script>
+</div>
+{% endblock %}

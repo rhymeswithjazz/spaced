@@ -1,0 +1,175 @@
+{% extends 'base.html' %}
+
+{% block title %}Settings - Spaaaaaaced{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Settings</h1>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Manage your preferences and reminders</p>
+    </div>
+
+    <form method="post" class="space-y-8">
+        {% csrf_token %}
+
+        <!-- Appearance -->
+        <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Appearance</h3>
+
+                <div class="space-y-4">
+                    <div>
+                        <label for="id_theme" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Theme
+                        </label>
+                        <div class="mt-1">
+                            {{ pref_form.theme }}
+                        </div>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                            Choose your preferred color scheme. "System" follows your device settings.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Study Preferences -->
+        <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Study Preferences</h3>
+
+                <div class="space-y-4">
+                    <div>
+                        <label for="id_card_text_size" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Card text size
+                        </label>
+                        <div class="mt-1">
+                            {{ pref_form.card_text_size }}
+                        </div>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                            Default text size for flashcards during review. You can also change this during a session.
+                        </p>
+                    </div>
+
+                    <div>
+                        <label for="id_cards_per_session" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Cards per session
+                        </label>
+                        <div class="mt-1">
+                            {{ pref_form.cards_per_session }}
+                        </div>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                            Maximum number of cards to review in a single session.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Email Reminders -->
+        <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Email Reminders</h3>
+
+                <div class="space-y-4">
+                    <div class="flex items-start">
+                        <div class="flex items-center h-5">
+                            {{ reminder_form.enabled }}
+                        </div>
+                        <div class="ml-3 text-sm">
+                            <label for="id_enabled" class="font-medium text-gray-700 dark:text-gray-300">Enable email reminders</label>
+                            <p class="text-gray-500 dark:text-gray-400">Receive email notifications when you have cards to review.</p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="id_frequency" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Frequency
+                        </label>
+                        <div class="mt-1">
+                            {{ reminder_form.frequency }}
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="id_preferred_time" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Preferred time
+                        </label>
+                        <div class="mt-1">
+                            {{ reminder_form.preferred_time }}
+                        </div>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                            Time of day to receive reminders (server timezone).
+                        </p>
+                    </div>
+
+                    <div>
+                        <label for="id_custom_days" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Custom days <span class="text-gray-400">(for custom frequency)</span>
+                        </label>
+                        <div class="mt-1">
+                            {{ reminder_form.custom_days }}
+                        </div>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                            Comma-separated day numbers (0=Monday, 6=Sunday). Example: 0,2,4 for Mon/Wed/Fri.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Save Button -->
+        <div class="flex justify-end">
+            <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                Save Settings
+            </button>
+        </div>
+    </form>
+
+    <!-- Account Info -->
+    <div class="mt-8 bg-white dark:bg-gray-800 shadow sm:rounded-lg">
+        <div class="px-4 py-5 sm:p-6">
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Account</h3>
+            <dl class="space-y-4">
+                <div>
+                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Username</dt>
+                    <dd class="mt-1 text-sm text-gray-900 dark:text-white">{{ user.username }}</dd>
+                </div>
+                <div>
+                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Email</dt>
+                    <dd class="mt-1 text-sm text-gray-900 dark:text-white">{{ user.email|default:"Not set" }}</dd>
+                </div>
+                <div>
+                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Member since</dt>
+                    <dd class="mt-1 text-sm text-gray-900 dark:text-white">{{ user.date_joined|date:"F j, Y" }}</dd>
+                </div>
+            </dl>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Sync theme setting changes to localStorage immediately
+document.getElementById('id_theme').addEventListener('change', function(e) {
+    const theme = e.target.value;
+    if (theme === 'system') {
+        localStorage.removeItem('theme');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (prefersDark) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    } else {
+        localStorage.setItem('theme', theme);
+        if (theme === 'dark') {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    }
+});
+</script>
+{% endblock %}

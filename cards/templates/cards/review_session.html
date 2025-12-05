@@ -1,0 +1,416 @@
+{% extends 'base.html' %}
+
+{% block title %}Review Session - Spaaaaaaced{% endblock %}
+
+{% block extra_head %}
+<style>
+    .card-text { transition: font-size 0.2s ease; }
+    .card-text.size-small { font-size: 1.125rem; line-height: 1.75rem; }
+    .card-text.size-medium { font-size: 1.5rem; line-height: 2rem; }
+    .card-text.size-large { font-size: 2.25rem; line-height: 2.5rem; }
+    .card-text.size-xlarge { font-size: 3rem; line-height: 1.2; }
+    .card-text.size-xxlarge { font-size: 4rem; line-height: 1.1; }
+    .card-text.size-xxxlarge { font-size: 5rem; line-height: 1.1; }
+    .size-btn.active { background-color: rgb(14 165 233); color: white; }
+    /* Cloze deletion styles */
+    .cloze-blank {
+        display: inline-block;
+        min-width: 4em;
+        border-bottom: 3px solid rgb(59 130 246);
+        margin: 0 0.1em;
+    }
+    .cloze-blank.has-hint {
+        color: rgb(148 163 184);
+        font-style: italic;
+        font-size: 0.75em;
+        vertical-align: baseline;
+    }
+    .dark .cloze-blank {
+        border-bottom-color: rgb(96 165 250);
+    }
+    .dark .cloze-blank.has-hint {
+        color: rgb(100 116 139);
+    }
+    .cloze-answer {
+        display: inline;
+        padding: 0.1em 0.3em;
+        background-color: rgb(187 247 208);
+        border-radius: 0.25rem;
+        color: rgb(22 101 52);
+        font-weight: 600;
+    }
+    .dark .cloze-answer {
+        background-color: rgb(20 83 45);
+        color: rgb(187 247 208);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="review-app" class="max-w-3xl mx-auto">
+    <!-- Progress Bar & Controls -->
+    <div class="mb-6">
+        <div class="flex justify-between items-center text-sm text-gray-600 dark:text-gray-400 mb-2">
+            <span>Progress</span>
+            <div class="flex items-center gap-4">
+                <!-- Text Size Toggle -->
+                <div class="flex items-center gap-1">
+                    <span class="text-xs mr-1">Size:</span>
+                    <button data-size="small" class="size-btn px-2 py-1 rounded text-xs hover:bg-gray-200 dark:hover:bg-gray-700" title="Small">S</button>
+                    <button data-size="medium" class="size-btn px-2 py-1 rounded text-xs hover:bg-gray-200 dark:hover:bg-gray-700" title="Medium">M</button>
+                    <button data-size="large" class="size-btn px-2 py-1 rounded text-xs hover:bg-gray-200 dark:hover:bg-gray-700" title="Large">L</button>
+                    <button data-size="xlarge" class="size-btn px-2 py-1 rounded text-xs hover:bg-gray-200 dark:hover:bg-gray-700" title="Extra Large">XL</button>
+                    <button data-size="xxlarge" class="size-btn px-2 py-1 rounded text-xs hover:bg-gray-200 dark:hover:bg-gray-700" title="2X Large">2X</button>
+                    <button data-size="xxxlarge" class="size-btn px-2 py-1 rounded text-xs hover:bg-gray-200 dark:hover:bg-gray-700" title="3X Large">3X</button>
+                </div>
+                <span id="progress-text">0 / {{ total_due }}</span>
+            </div>
+        </div>
+        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+            <div id="progress-bar" class="bg-primary-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+        </div>
+    </div>
+
+    <!-- Card Container -->
+    <div id="card-container" class="bg-white dark:bg-gray-800 shadow-lg rounded-lg overflow-hidden">
+        <!-- Card Content -->
+        <div id="card-content" class="p-8 min-h-[300px] flex flex-col">
+            <div class="flex-1 flex flex-col items-center justify-center text-center">
+                <!-- Front Side -->
+                <div id="card-front" class="w-full">
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Question</p>
+                    <p id="front-text" class="card-text text-gray-900 dark:text-white whitespace-pre-wrap"></p>
+                </div>
+
+                <!-- Back Side (hidden initially) -->
+                <div id="card-back" class="hidden w-full mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Answer</p>
+                    <p id="back-text" class="card-text text-gray-900 dark:text-white whitespace-pre-wrap"></p>
+
+                    <!-- Notes -->
+                    <div id="notes-container" class="hidden mt-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">Notes</p>
+                        <p id="notes-text" class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="bg-gray-50 dark:bg-gray-900 px-8 py-6">
+            <!-- Show Answer Button -->
+            <div id="show-answer-container" class="flex justify-center">
+                <button id="show-answer-btn" class="px-8 py-3 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg shadow transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                    Show Answer
+                </button>
+            </div>
+
+            <!-- Rating Buttons (hidden initially) -->
+            <div id="rating-container" class="hidden">
+                <p class="text-center text-sm text-gray-600 dark:text-gray-400 mb-4">How well did you remember?</p>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <button data-quality="0" class="rating-btn px-4 py-3 bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-200 hover:bg-red-200 dark:hover:bg-red-900 rounded-lg font-medium transition-colors">
+                        <span class="block text-lg">Again</span>
+                        <span class="block text-xs opacity-75">Forgot</span>
+                    </button>
+                    <button data-quality="2" class="rating-btn px-4 py-3 bg-orange-100 dark:bg-orange-900/50 text-orange-800 dark:text-orange-200 hover:bg-orange-200 dark:hover:bg-orange-900 rounded-lg font-medium transition-colors">
+                        <span class="block text-lg">Hard</span>
+                        <span class="block text-xs opacity-75">Struggled</span>
+                    </button>
+                    <button data-quality="4" class="rating-btn px-4 py-3 bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200 hover:bg-green-200 dark:hover:bg-green-900 rounded-lg font-medium transition-colors">
+                        <span class="block text-lg">Good</span>
+                        <span class="block text-xs opacity-75">Recalled</span>
+                    </button>
+                    <button data-quality="5" class="rating-btn px-4 py-3 bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 hover:bg-blue-200 dark:hover:bg-blue-900 rounded-lg font-medium transition-colors">
+                        <span class="block text-lg">Easy</span>
+                        <span class="block text-xs opacity-75">Instant</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Session Complete (hidden initially) -->
+    <div id="session-complete" class="hidden bg-white dark:bg-gray-800 shadow-lg rounded-lg p-8 text-center">
+        <div class="mb-6">
+            <svg class="mx-auto h-16 w-16 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+        </div>
+        <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Session Complete!</h2>
+        <p class="text-gray-600 dark:text-gray-400 mb-6">Great job! You've reviewed all due cards.</p>
+
+        <div class="grid grid-cols-3 gap-4 mb-8 max-w-md mx-auto">
+            <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                <div id="stat-reviewed" class="text-2xl font-bold text-gray-900 dark:text-white">0</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400">Reviewed</div>
+            </div>
+            <div class="bg-green-50 dark:bg-green-900/30 rounded-lg p-4">
+                <div id="stat-correct" class="text-2xl font-bold text-green-600 dark:text-green-400">0</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400">Correct</div>
+            </div>
+            <div class="bg-red-50 dark:bg-red-900/30 rounded-lg p-4">
+                <div id="stat-again" class="text-2xl font-bold text-red-600 dark:text-red-400">0</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400">Again</div>
+            </div>
+        </div>
+
+        <div class="flex justify-center space-x-4">
+            <a href="{% url 'dashboard' %}" class="px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                Back to Dashboard
+            </a>
+            {% if deck %}
+            <a href="{% url 'deck_detail' deck.pk %}" class="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors">
+                View Deck
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Keyboard shortcuts hint -->
+    <div class="mt-4 text-center text-sm text-gray-500 dark:text-gray-400">
+        <span class="hidden sm:inline">Keyboard shortcuts: </span>
+        <kbd class="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-xs">Space</kbd> show answer,
+        <kbd class="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-xs">1-4</kbd> rate card
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    // Card data from server
+    const cards = {{ cards_json|safe }};
+    const defaultTextSize = '{{ text_size }}';
+
+    // State
+    let currentIndex = 0;
+    let showingAnswer = false;
+    let stats = { reviewed: 0, correct: 0, again: 0 };
+    let currentTextSize = localStorage.getItem('cardTextSize') || defaultTextSize;
+
+    // DOM elements
+    const cardContainer = document.getElementById('card-container');
+    const sessionComplete = document.getElementById('session-complete');
+    const frontText = document.getElementById('front-text');
+    const backText = document.getElementById('back-text');
+    const notesText = document.getElementById('notes-text');
+    const notesContainer = document.getElementById('notes-container');
+    const cardFront = document.getElementById('card-front');
+    const cardBack = document.getElementById('card-back');
+    const showAnswerContainer = document.getElementById('show-answer-container');
+    const ratingContainer = document.getElementById('rating-container');
+    const showAnswerBtn = document.getElementById('show-answer-btn');
+    const progressBar = document.getElementById('progress-bar');
+    const progressText = document.getElementById('progress-text');
+
+    // Cloze pattern: {% verbatim %}{{c1::text}}{% endverbatim %} or {% verbatim %}{{c1::text::hint}}{% endverbatim %}
+    const CLOZE_PATTERN = /\{\{c(\d+)::([^:}]+)(?:::([^}]+))?\}\}/g;
+
+    // Cloze rendering functions
+    function renderClozeQuestion(text, activeCloze) {
+        // Replace cloze deletions - blank only the active cloze number
+        return text.replace(CLOZE_PATTERN, (match, num, answer, hint) => {
+            const clozeNum = parseInt(num);
+            // If this is the active cloze, show blank
+            if (activeCloze === null || clozeNum === activeCloze) {
+                if (hint) {
+                    return `<span class="cloze-blank has-hint">${hint}</span>`;
+                }
+                return '<span class="cloze-blank"></span>';
+            }
+            // Otherwise show the answer
+            return answer;
+        });
+    }
+
+    function renderClozeAnswer(text, activeCloze) {
+        // Replace cloze deletions - highlight only the active cloze
+        return text.replace(CLOZE_PATTERN, (match, num, answer, hint) => {
+            const clozeNum = parseInt(num);
+            if (activeCloze === null || clozeNum === activeCloze) {
+                return `<span class="cloze-answer">${answer}</span>`;
+            }
+            return answer;
+        });
+    }
+
+    function isClozeCard(card) {
+        return card.card_type === 'cloze';
+    }
+
+    // Text size functions
+    function setTextSize(size) {
+        currentTextSize = size;
+        localStorage.setItem('cardTextSize', size);
+
+        // Update card text classes
+        const sizes = ['small', 'medium', 'large', 'xlarge', 'xxlarge', 'xxxlarge'];
+        document.querySelectorAll('.card-text').forEach(el => {
+            sizes.forEach(s => el.classList.remove('size-' + s));
+            el.classList.add('size-' + size);
+        });
+
+        // Update button states
+        document.querySelectorAll('.size-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.size === size);
+        });
+    }
+
+    // Initialize
+    function init() {
+        if (cards.length === 0) {
+            showComplete();
+            return;
+        }
+        setTextSize(currentTextSize);
+        showCard(0);
+        setupEventListeners();
+    }
+
+    function showCard(index) {
+        const card = cards[index];
+
+        if (isClozeCard(card)) {
+            // Cloze card: front shows text with active cloze blanked, back shows it revealed
+            const activeCloze = card.active_cloze;
+            frontText.innerHTML = renderClozeQuestion(card.front, activeCloze);
+            backText.innerHTML = renderClozeAnswer(card.front, activeCloze);
+        } else {
+            // Basic card: standard front/back
+            frontText.textContent = card.front;
+            backText.textContent = card.back;
+        }
+
+        if (card.notes) {
+            notesText.textContent = card.notes;
+            notesContainer.classList.remove('hidden');
+        } else {
+            notesContainer.classList.add('hidden');
+        }
+
+        // Reset view
+        cardBack.classList.add('hidden');
+        showAnswerContainer.classList.remove('hidden');
+        ratingContainer.classList.add('hidden');
+        showingAnswer = false;
+
+        updateProgress();
+    }
+
+    function showAnswer() {
+        cardBack.classList.remove('hidden');
+        showAnswerContainer.classList.add('hidden');
+        ratingContainer.classList.remove('hidden');
+        showingAnswer = true;
+    }
+
+    async function submitRating(quality) {
+        const card = cards[currentIndex];
+
+        try {
+            const response = await fetch(`/api/review/${card.id}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({ quality })
+            });
+
+            if (!response.ok) throw new Error('Review failed');
+
+            // Update stats
+            stats.reviewed++;
+            if (quality >= 3) {
+                stats.correct++;
+            }
+            if (quality < 3) {
+                stats.again++;
+            }
+
+            // Next card or complete
+            currentIndex++;
+            if (currentIndex >= cards.length) {
+                showComplete();
+            } else {
+                showCard(currentIndex);
+            }
+        } catch (error) {
+            console.error('Error submitting review:', error);
+            alert('Failed to submit review. Please try again.');
+        }
+    }
+
+    function showComplete() {
+        cardContainer.classList.add('hidden');
+        sessionComplete.classList.remove('hidden');
+
+        document.getElementById('stat-reviewed').textContent = stats.reviewed;
+        document.getElementById('stat-correct').textContent = stats.correct;
+        document.getElementById('stat-again').textContent = stats.again;
+
+        // Update progress to 100%
+        progressBar.style.width = '100%';
+        progressText.textContent = `${cards.length} / ${cards.length}`;
+    }
+
+    function updateProgress() {
+        const progress = (currentIndex / cards.length) * 100;
+        progressBar.style.width = `${progress}%`;
+        progressText.textContent = `${currentIndex} / ${cards.length}`;
+    }
+
+    function setupEventListeners() {
+        // Show answer button
+        showAnswerBtn.addEventListener('click', showAnswer);
+
+        // Rating buttons
+        document.querySelectorAll('.rating-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const quality = parseInt(btn.dataset.quality);
+                submitRating(quality);
+            });
+        });
+
+        // Text size buttons
+        document.querySelectorAll('.size-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                setTextSize(btn.dataset.size);
+            });
+        });
+
+        // Keyboard shortcuts - use window and capture phase
+        window.addEventListener('keydown', (e) => {
+            // Ignore if typing in an input
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+            // Ignore if session is complete
+            if (currentIndex >= cards.length) return;
+
+            if ((e.code === 'Space' || e.key === ' ') && !showingAnswer) {
+                e.preventDefault();
+                showAnswer();
+            } else if (showingAnswer) {
+                // Handle both regular number keys and numpad
+                const keyMap = {
+                    '1': 0, '2': 2, '3': 4, '4': 5,
+                    'Digit1': 0, 'Digit2': 2, 'Digit3': 4, 'Digit4': 5,
+                    'Numpad1': 0, 'Numpad2': 2, 'Numpad3': 4, 'Numpad4': 5
+                };
+                const quality = keyMap[e.key] !== undefined ? keyMap[e.key] : keyMap[e.code];
+                if (quality !== undefined) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    submitRating(quality);
+                }
+            }
+        }, true);  // Use capture phase
+    }
+
+    // Start
+    init();
+})();
+</script>
+{% endblock %}
