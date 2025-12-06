@@ -48,4 +48,7 @@ urlpatterns = [
 
     # Email preview (staff only, DEBUG mode only)
     path('email/preview/<str:email_type>/', views.preview_email, name='email_preview'),
+
+    # Health check
+    path('health/', views.health_check, name='health_check'),
 ]

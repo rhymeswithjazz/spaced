@@ -24,6 +24,7 @@ from .card import CardCreateView, CardUpdateView, CardDeleteView
 from .review import review_session, review_card
 from .settings import settings_view, api_set_theme, api_get_theme
 from .email import unsubscribe, unsubscribe_type, manage_preferences, preview_email
+from .health import health_check
 
 __all__ = [
     # Auth
@@ -62,4 +63,6 @@ __all__ = [
     'unsubscribe_type',
     'manage_preferences',
     'preview_email',
+    # Health
+    'health_check',
 ]
