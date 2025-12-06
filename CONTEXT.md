@@ -250,6 +250,11 @@ uv run python manage.py send_test_email <username> study_reminder --theme=dark
 
 ## Recent Major Changes
 
+### 2025-12-06 - CI Workflow Optimization
+- **What**: Added path filtering to skip CI for documentation-only changes
+- **Why**: Save CI minutes and speed up documentation PRs
+- **Impact**: Pushes and PRs that only modify `.md` files will skip CI entirely
+
 ### 2025-12-06 - Comprehensive Email System Overhaul
 - **What**: Complete rewrite of email system with branded templates, multiple email types, and user preferences
 - **Why**: Previous system was plain text only, limited to study reminders, no user control
