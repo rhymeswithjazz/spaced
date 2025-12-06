@@ -92,7 +92,7 @@ flashcard/
 │   ├── cloze.py             # Cloze deletion parsing/rendering (pure functions)
 │   ├── admin.py             # Admin interface
 │   ├── context_processors.py # User theme context
-│   ├── tests.py             # Unit tests (176 tests)
+│   ├── tests.py             # Unit tests (177 tests)
 │   ├── templates/cards/     # App templates
 │   └── management/commands/
 │       └── send_reminders.py
@@ -114,7 +114,7 @@ flashcard/
   - Forecast tab: 7-day calendar of upcoming reviews
   - By Deck tab: Per-deck statistics table
 - **Decks**: List, create, edit, delete, import decks
-- **Deck Detail**: View cards, due count, export deck, quick actions
+- **Deck Detail**: View cards, due count, export deck, reset deck, quick actions
 - **Card CRUD**: Add/edit/delete cards with type selection and cloze validation
 - **Review Session**: Interactive card review with keyboard shortcuts, shuffled order
 - **Settings**: Theme, cards per session, email reminder preferences
@@ -178,6 +178,22 @@ docker compose exec web uv run python manage.py send_reminders
 Recommended: Daily at user's preferred reminder time.
 
 ## Recent Major Changes
+
+### 2025-12-06 - Deck Reset & Due/New Card Separation
+- **What**: Added deck reset functionality and fixed how new vs due cards are counted
+- **Why**: New cards were incorrectly showing as "due", causing confusion. Users needed ability to reset deck progress.
+- **Impact**: Dashboard now correctly distinguishes between cards due for review and new cards never studied
+- **Features**:
+  - **Due vs New separation**: `cards_due_count()` now excludes new cards (repetitions=0)
+  - Added `cards_new_count()` method to Deck model
+  - Dashboard shows "X due" (yellow) or "X new" (blue) badges on deck cards
+  - Review session prioritizes due cards over new cards (due cards studied first)
+  - **Deck Reset**: Reset button on deck detail page with confirmation modal
+  - Confirmation requires typing deck name to prevent accidental resets
+  - Reset clears all progress: ease_factor=2.5, interval=0, repetitions=0
+  - Reset also deletes all review history for the deck
+  - Dashboard deck cards now use flexbox for consistent footer alignment
+  - Play icon replaced with "Review" button on deck cards
 
 ### 2025-12-05 - Email Verification for New Accounts
 - **What**: Added email verification requirement for new user registrations
