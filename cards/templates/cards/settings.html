@@ -66,10 +66,82 @@
             </div>
         </div>
 
-        <!-- Email Reminders -->
+        <!-- Email Notifications -->
         <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg">
             <div class="px-4 py-5 sm:p-6">
-                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Email Reminders</h3>
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Email Notifications</h3>
+
+                <!-- Global unsubscribe -->
+                <div class="mb-6 p-4 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+                    <div class="flex items-start">
+                        <div class="flex items-center h-5">
+                            {{ pref_form.email_unsubscribed }}
+                        </div>
+                        <div class="ml-3 text-sm">
+                            <label for="id_email_unsubscribed" class="font-medium text-gray-700 dark:text-gray-300">Unsubscribe from all emails</label>
+                            <p class="text-gray-500 dark:text-gray-400">Stop receiving all promotional emails from Spaced.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-4" id="email-preferences">
+                    <div class="flex items-start">
+                        <div class="flex items-center h-5">
+                            {{ pref_form.email_study_reminders }}
+                        </div>
+                        <div class="ml-3 text-sm">
+                            <label for="id_email_study_reminders" class="font-medium text-gray-700 dark:text-gray-300">Study Reminders</label>
+                            <p class="text-gray-500 dark:text-gray-400">Daily reminders when you have cards due for review.</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-start">
+                        <div class="flex items-center h-5">
+                            {{ pref_form.email_streak_reminders }}
+                        </div>
+                        <div class="ml-3 text-sm">
+                            <label for="id_email_streak_reminders" class="font-medium text-gray-700 dark:text-gray-300">Streak Alerts</label>
+                            <p class="text-gray-500 dark:text-gray-400">Get notified when your streak is at risk.</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-start">
+                        <div class="flex items-center h-5">
+                            {{ pref_form.email_weekly_stats }}
+                        </div>
+                        <div class="ml-3 text-sm">
+                            <label for="id_email_weekly_stats" class="font-medium text-gray-700 dark:text-gray-300">Weekly Progress Report</label>
+                            <p class="text-gray-500 dark:text-gray-400">Sunday summary of your learning progress.</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-start">
+                        <div class="flex items-center h-5">
+                            {{ pref_form.email_inactivity_nudge }}
+                        </div>
+                        <div class="ml-3 text-sm">
+                            <label for="id_email_inactivity_nudge" class="font-medium text-gray-700 dark:text-gray-300">Come Back Nudges</label>
+                            <p class="text-gray-500 dark:text-gray-400">Friendly reminders if you haven't studied in a few days.</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-start">
+                        <div class="flex items-center h-5">
+                            {{ pref_form.email_achievement_notifications }}
+                        </div>
+                        <div class="ml-3 text-sm">
+                            <label for="id_email_achievement_notifications" class="font-medium text-gray-700 dark:text-gray-300">Achievement Celebrations</label>
+                            <p class="text-gray-500 dark:text-gray-400">Get notified when you hit milestones.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Email Reminder Schedule -->
+        <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Reminder Schedule</h3>
 
                 <div class="space-y-4">
                     <div class="flex items-start">
@@ -77,8 +149,8 @@
                             {{ reminder_form.enabled }}
                         </div>
                         <div class="ml-3 text-sm">
-                            <label for="id_enabled" class="font-medium text-gray-700 dark:text-gray-300">Enable email reminders</label>
-                            <p class="text-gray-500 dark:text-gray-400">Receive email notifications when you have cards to review.</p>
+                            <label for="id_enabled" class="font-medium text-gray-700 dark:text-gray-300">Enable scheduled reminders</label>
+                            <p class="text-gray-500 dark:text-gray-400">Receive email reminders based on your schedule below.</p>
                         </div>
                     </div>
 
@@ -103,16 +175,18 @@
                         </p>
                     </div>
 
-                    <div>
-                        <label for="id_custom_days" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Custom days <span class="text-gray-400">(for custom frequency)</span>
+                    <div id="custom-days-section" class="hidden">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Days to receive reminders
                         </label>
-                        <div class="mt-1">
-                            {{ reminder_form.custom_days }}
+                        <div class="flex flex-wrap gap-4">
+                            {% for checkbox in reminder_form.custom_days_checkboxes %}
+                            <label class="inline-flex items-center cursor-pointer">
+                                {{ checkbox.tag }}
+                                <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">{{ checkbox.choice_label }}</span>
+                            </label>
+                            {% endfor %}
                         </div>
-                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                            Comma-separated day numbers (0=Monday, 6=Sunday). Example: 0,2,4 for Mon/Wed/Fri.
-                        </p>
                     </div>
                 </div>
             </div>
@@ -171,5 +245,23 @@ document.getElementById('id_theme').addEventListener('change', function(e) {
         }
     }
 });
+
+// Toggle custom days visibility based on frequency selection
+const frequencySelect = document.getElementById('id_frequency');
+const customDaysSection = document.getElementById('custom-days-section');
+
+function updateCustomDaysVisibility() {
+    if (frequencySelect.value === 'custom') {
+        customDaysSection.classList.remove('hidden');
+    } else {
+        customDaysSection.classList.add('hidden');
+    }
+}
+
+// Set initial state
+updateCustomDaysVisibility();
+
+// Listen for changes
+frequencySelect.addEventListener('change', updateCustomDaysVisibility);
 </script>
 {% endblock %}

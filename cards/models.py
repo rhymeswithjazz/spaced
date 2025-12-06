@@ -1,4 +1,5 @@
 import secrets
+import uuid
 
 from django.db import models
 from django.contrib.auth.models import User
@@ -157,7 +158,7 @@ class ReviewReminder(models.Model):
 
 
 class UserPreferences(models.Model):
-    """User preferences including theme settings."""
+    """User preferences including theme settings and email notifications."""
 
     class Theme(models.TextChoices):
         LIGHT = 'light', 'Light'
@@ -184,6 +185,21 @@ class UserPreferences(models.Model):
         default=TextSize.LARGE
     )
     cards_per_session = models.IntegerField(default=20)
+
+    # Email notification preferences
+    email_study_reminders = models.BooleanField(default=True)
+    email_streak_reminders = models.BooleanField(default=True)
+    email_weekly_stats = models.BooleanField(default=True)
+    email_inactivity_nudge = models.BooleanField(default=True)
+    email_achievement_notifications = models.BooleanField(default=True)
+    email_unsubscribed = models.BooleanField(default=False)  # Global unsubscribe
+    unsubscribe_token = models.UUIDField(default=uuid.uuid4, editable=False)
+
+    # Study statistics for streak tracking
+    current_streak = models.IntegerField(default=0)
+    longest_streak = models.IntegerField(default=0)
+    last_study_date = models.DateField(null=True, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -192,6 +208,40 @@ class UserPreferences(models.Model):
 
     def __str__(self):
         return f"Preferences for {self.user.username}"
+
+    def update_streak(self):
+        """Update streak based on current date and last study date."""
+        today = timezone.now().date()
+
+        if self.last_study_date is None:
+            # First study session
+            self.current_streak = 1
+            self.last_study_date = today
+        elif self.last_study_date == today:
+            # Already studied today, no change needed
+            pass
+        elif self.last_study_date == today - timezone.timedelta(days=1):
+            # Studied yesterday, extend streak
+            self.current_streak += 1
+            self.last_study_date = today
+        else:
+            # Streak broken, start fresh
+            self.current_streak = 1
+            self.last_study_date = today
+
+        # Update longest streak if current is higher
+        if self.current_streak > self.longest_streak:
+            self.longest_streak = self.current_streak
+
+        self.save()
+
+    def check_streak_at_risk(self):
+        """Check if user's streak is at risk (hasn't studied today)."""
+        if self.current_streak == 0:
+            return False
+
+        today = timezone.now().date()
+        return self.last_study_date != today
 
 
 class EmailVerificationToken(models.Model):
@@ -215,3 +265,50 @@ class EmailVerificationToken(models.Model):
         """Check if the token has expired (24 hours)."""
         from datetime import timedelta
         return timezone.now() > self.created_at + timedelta(hours=24)
+
+
+class EmailLog(models.Model):
+    """Log of sent emails for deduplication and history."""
+
+    class EmailType(models.TextChoices):
+        VERIFICATION = 'verification', 'Email Verification'
+        STUDY_REMINDER = 'study_reminder', 'Study Reminder'
+        STREAK_REMINDER = 'streak_reminder', 'Streak Reminder'
+        WEEKLY_STATS = 'weekly_stats', 'Weekly Statistics'
+        INACTIVITY_NUDGE = 'inactivity_nudge', 'Inactivity Nudge'
+        ACHIEVEMENT = 'achievement', 'Achievement'
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='email_logs')
+    email_type = models.CharField(max_length=30, choices=EmailType.choices)
+    subject = models.CharField(max_length=200)
+    sent_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-sent_at']
+        indexes = [
+            models.Index(fields=['user', 'email_type', 'sent_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.email_type} to {self.user.username} at {self.sent_at}"
+
+    @classmethod
+    def was_sent_today(cls, user, email_type):
+        """Check if this email type was already sent to user today."""
+        today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        return cls.objects.filter(
+            user=user,
+            email_type=email_type,
+            sent_at__gte=today_start
+        ).exists()
+
+    @classmethod
+    def was_sent_this_week(cls, user, email_type):
+        """Check if this email type was already sent to user this week."""
+        from datetime import timedelta
+        week_ago = timezone.now() - timedelta(days=7)
+        return cls.objects.filter(
+            user=user,
+            email_type=email_type,
+            sent_at__gte=week_ago
+        ).exists()

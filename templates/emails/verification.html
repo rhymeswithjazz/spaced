@@ -1,0 +1,30 @@
+{% extends "emails/base.html" %}
+
+{% block title %}Verify your email - Spaced{% endblock %}
+
+{% block content %}
+<h1 style="margin: 0 0 16px 0; font-size: 24px; font-weight: 600; color: {{ colors.primary_text }}; line-height: 1.3;">
+  Verify your email address
+</h1>
+
+<p style="margin: 0 0 24px 0; font-size: 16px; color: {{ colors.secondary_text }}; line-height: 1.6;">
+  Hi {{ username }},
+</p>
+
+<p style="margin: 0 0 24px 0; font-size: 16px; color: {{ colors.primary_text }}; line-height: 1.6;">
+  Thanks for creating an account on Spaced! Please verify your email address by clicking the button below.
+</p>
+
+{% include "emails/components/button.html" with url=verification_url text="Verify Email Address" %}
+
+<p style="margin: 24px 0 0 0; font-size: 14px; color: {{ colors.secondary_text }}; line-height: 1.6;">
+  This link will expire in 24 hours. If you didn't create an account, you can safely ignore this email.
+</p>
+
+<hr style="margin: 24px 0; border: none; border-top: 1px solid {{ colors.border }};">
+
+<p style="margin: 0; font-size: 13px; color: {{ colors.secondary_text }}; line-height: 1.6;">
+  If the button doesn't work, copy and paste this link into your browser:<br>
+  <a href="{{ verification_url }}" style="color: {{ colors.accent }}; word-break: break-all;">{{ verification_url }}</a>
+</p>
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends "emails/base.txt" %}
+
+{% block content %}
+Your Weekly Progress
+{{ week_start|date:"M j" }} - {{ week_end|date:"M j, Y" }}
+
+Hi {{ username }}, here's your learning summary for the week.
+
+STATS
+-----
+Cards Reviewed: {{ cards_reviewed }}
+Current Streak: {{ current_streak }} day{{ current_streak|pluralize }}
+{% if average_rating %}Average Rating: {{ average_rating|floatformat:1 }}/5{% endif %}
+
+{% if cards_reviewed_last_week is not None %}COMPARED TO LAST WEEK
+---------------------
+{% if cards_reviewed > cards_reviewed_last_week %}+{{ cards_reviewed|add:cards_reviewed_last_week|default:0 }} more cards reviewed{% elif cards_reviewed < cards_reviewed_last_week %}{{ cards_reviewed_last_week|add:cards_reviewed|default:0 }} fewer cards reviewed{% else %}Same as last week{% endif %}
+
+{% endif %}{% if deck_stats %}BY DECK
+-------
+{% for deck in deck_stats %}{{ deck.name }}: {{ deck.count }} cards
+{% endfor %}
+{% endif %}
+{% if cards_due > 0 %}You have {{ cards_due }} card{{ cards_due|pluralize }} waiting for review.
+
+Continue learning: {{ review_url }}
+{% else %}You're all caught up! Great job!
+{% endif %}
+
+Keep up the great work!
+{% endblock %}

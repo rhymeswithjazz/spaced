@@ -1,0 +1,52 @@
+{% extends "emails/base.html" %}
+
+{% block title %}{{ achievement_title }} - Spaced{% endblock %}
+
+{% block content %}
+<div style="text-align: center; margin-bottom: 16px;">
+  <span style="display: inline-block; font-size: 64px;">{{ achievement_emoji|default:"&#127942;" }}</span>
+</div>
+
+<h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 600; color: {{ colors.primary_text }}; line-height: 1.3; text-align: center;">
+  Congratulations, {{ username }}!
+</h1>
+
+<p style="margin: 0 0 24px 0; font-size: 18px; color: {{ colors.accent }}; font-weight: 600; text-align: center;">
+  {{ achievement_title }}
+</p>
+
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin: 0 0 24px 0;">
+  <tr>
+    <td style="padding: 32px; background: linear-gradient(135deg, {% if theme == 'dark' %}#1e3a5f{% else %}#e0f2fe{% endif %}, {% if theme == 'dark' %}#1e293b{% else %}#f0f9ff{% endif %}); border-radius: 16px; text-align: center;">
+      <p style="margin: 0; font-size: 16px; color: {{ colors.primary_text }}; line-height: 1.6;">
+        {{ achievement_description }}
+      </p>
+    </td>
+  </tr>
+</table>
+
+{% if achievement_stat %}
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin: 0 0 24px 0;">
+  <tr>
+    <td style="padding: 20px; background-color: {% if theme == 'dark' %}#1e293b{% else %}#f0f9ff{% endif %}; border-radius: 12px; text-align: center;">
+      <p style="margin: 0 0 4px 0; font-size: 40px; font-weight: 700; color: {{ colors.accent }};">
+        {{ achievement_stat }}
+      </p>
+      <p style="margin: 0; font-size: 14px; color: {{ colors.secondary_text }};">
+        {{ achievement_stat_label }}
+      </p>
+    </td>
+  </tr>
+</table>
+{% endif %}
+
+<p style="margin: 0 0 24px 0; font-size: 16px; color: {{ colors.primary_text }}; line-height: 1.6; text-align: center;">
+  Your dedication to learning is paying off. Keep up the amazing work!
+</p>
+
+{% include "emails/components/button.html" with url=review_url text="Keep Learning" %}
+
+<p style="margin: 24px 0 0 0; font-size: 14px; color: {{ colors.secondary_text }}; line-height: 1.6; text-align: center;">
+  More achievements await you!
+</p>
+{% endblock %}

@@ -1,0 +1,47 @@
+{% extends "emails/base.html" %}
+
+{% block title %}Your streak is at risk! - Spaced{% endblock %}
+
+{% block content %}
+<div style="text-align: center; margin-bottom: 24px;">
+  <span style="display: inline-block; font-size: 48px;">&#128293;</span>
+</div>
+
+<h1 style="margin: 0 0 16px 0; font-size: 24px; font-weight: 600; color: {{ colors.primary_text }}; line-height: 1.3; text-align: center;">
+  Don't lose your {{ current_streak }}-day streak!
+</h1>
+
+<p style="margin: 0 0 24px 0; font-size: 16px; color: {{ colors.secondary_text }}; line-height: 1.6; text-align: center;">
+  Hi {{ username }}, you haven't studied yet today.
+</p>
+
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin: 0 0 24px 0;">
+  <tr>
+    <td style="padding: 24px; background-color: {% if theme == 'dark' %}#1e293b{% else %}#fef3c7{% endif %}; border-radius: 12px; text-align: center;">
+      <p style="margin: 0 0 8px 0; font-size: 14px; color: {{ colors.secondary_text }};">
+        Current streak
+      </p>
+      <p style="margin: 0; font-size: 48px; font-weight: 700; color: {{ colors.warning }};">
+        {{ current_streak }}
+      </p>
+      <p style="margin: 8px 0 0 0; font-size: 14px; color: {{ colors.secondary_text }};">
+        day{{ current_streak|pluralize }}
+      </p>
+    </td>
+  </tr>
+</table>
+
+<p style="margin: 0 0 24px 0; font-size: 16px; color: {{ colors.primary_text }}; line-height: 1.6; text-align: center;">
+  {% if hours_remaining %}
+  You have <strong>{{ hours_remaining }} hour{{ hours_remaining|pluralize }}</strong> left to keep your streak alive.
+  {% else %}
+  Review just one card to keep your streak going!
+  {% endif %}
+</p>
+
+{% include "emails/components/button.html" with url=review_url text="Study Now" %}
+
+<p style="margin: 24px 0 0 0; font-size: 14px; color: {{ colors.secondary_text }}; line-height: 1.6; text-align: center;">
+  Even reviewing a single card counts!
+</p>
+{% endblock %}

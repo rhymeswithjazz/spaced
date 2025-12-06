@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block title %}Unsubscribed - Spaced{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-slate-50 dark:bg-slate-900 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md mx-auto text-center">
+        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-8">
+            <div class="w-16 h-16 mx-auto mb-6 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                <svg class="w-8 h-8 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+            </div>
+
+            <h1 class="text-xl font-bold text-slate-900 dark:text-white mb-2">
+                Unsubscribed from {{ email_type_label }}
+            </h1>
+            <p class="text-slate-600 dark:text-slate-400 mb-6">
+                {{ username }}, you won't receive {{ email_type_label|lower }} emails anymore.
+            </p>
+
+            <div class="space-y-3">
+                <a href="{{ preferences_url }}" class="block w-full px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 font-medium rounded-lg transition-colors">
+                    Manage other email preferences
+                </a>
+                <a href="/" class="block text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400">
+                    Go to Spaced
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

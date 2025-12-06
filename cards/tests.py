@@ -1790,8 +1790,8 @@ class SendRemindersCommandTests(TestCase):
         # Should still only see 1 card for original user
         self.assertEqual(cmd._get_due_cards_count(self.user), 1)
 
-    @patch('cards.management.commands.send_reminders.send_mail')
-    def test_send_reminder_email(self, mock_send_mail):
+    @patch('cards.management.commands.send_reminders.send_branded_email')
+    def test_send_reminder_email(self, mock_send_email):
         """Should send email with correct content."""
         from cards.management.commands.send_reminders import Command
         cmd = Command()
@@ -1799,14 +1799,14 @@ class SendRemindersCommandTests(TestCase):
 
         cmd._send_reminder_email(self.user, 5)
 
-        mock_send_mail.assert_called_once()
-        call_args = mock_send_mail.call_args
+        mock_send_email.assert_called_once()
+        call_args = mock_send_email.call_args
         self.assertIn('5 flashcards', call_args.kwargs['subject'])
-        self.assertIn('5 flashcards', call_args.kwargs['message'])
-        self.assertEqual(call_args.kwargs['recipient_list'], ['test@example.com'])
+        self.assertEqual(call_args.kwargs['user'], self.user)
+        self.assertEqual(call_args.kwargs['template_name'], 'emails/study_reminder')
 
-    @patch('cards.management.commands.send_reminders.send_mail')
-    def test_send_reminder_email_singular(self, mock_send_mail):
+    @patch('cards.management.commands.send_reminders.send_branded_email')
+    def test_send_reminder_email_singular(self, mock_send_email):
         """Should use singular 'flashcard' for count of 1."""
         from cards.management.commands.send_reminders import Command
         cmd = Command()
@@ -1814,35 +1814,35 @@ class SendRemindersCommandTests(TestCase):
 
         cmd._send_reminder_email(self.user, 1)
 
-        call_args = mock_send_mail.call_args
+        call_args = mock_send_email.call_args
         self.assertIn('1 flashcard to', call_args.kwargs['subject'])
         self.assertNotIn('flashcards', call_args.kwargs['subject'])
 
-    @patch('cards.management.commands.send_reminders.send_mail')
-    def test_handle_sends_reminder(self, mock_send_mail):
+    @patch('cards.management.commands.send_reminders.send_branded_email')
+    def test_handle_sends_reminder(self, mock_send_email):
         """Handle should send reminders for enabled users with due cards."""
         out = StringIO()
         call_command('send_reminders', stdout=out)
 
-        mock_send_mail.assert_called_once()
+        mock_send_email.assert_called_once()
         self.assertIn('Sent 1 reminder', out.getvalue())
 
         # Check that last_sent was updated
         self.reminder.refresh_from_db()
         self.assertIsNotNone(self.reminder.last_sent)
 
-    @patch('cards.management.commands.send_reminders.send_mail')
-    def test_handle_dry_run(self, mock_send_mail):
+    @patch('cards.management.commands.send_reminders.send_branded_email')
+    def test_handle_dry_run(self, mock_send_email):
         """Dry run should not send emails."""
         out = StringIO()
         call_command('send_reminders', '--dry-run', stdout=out)
 
-        mock_send_mail.assert_not_called()
+        mock_send_email.assert_not_called()
         self.assertIn('[DRY RUN]', out.getvalue())
         self.assertIn('1 cards due', out.getvalue())
 
-    @patch('cards.management.commands.send_reminders.send_mail')
-    def test_handle_skips_disabled_reminders(self, mock_send_mail):
+    @patch('cards.management.commands.send_reminders.send_branded_email')
+    def test_handle_skips_disabled_reminders(self, mock_send_email):
         """Should skip users with disabled reminders."""
         self.reminder.enabled = False
         self.reminder.save()
@@ -1850,11 +1850,11 @@ class SendRemindersCommandTests(TestCase):
         out = StringIO()
         call_command('send_reminders', stdout=out)
 
-        mock_send_mail.assert_not_called()
+        mock_send_email.assert_not_called()
         self.assertIn('Sent 0 reminder', out.getvalue())
 
-    @patch('cards.management.commands.send_reminders.send_mail')
-    def test_handle_skips_no_due_cards(self, mock_send_mail):
+    @patch('cards.management.commands.send_reminders.send_branded_email')
+    def test_handle_skips_no_due_cards(self, mock_send_email):
         """Should skip users with no cards due."""
         # Make the card not due
         self.card.next_review = timezone.now() + timedelta(days=1)
@@ -1863,11 +1863,11 @@ class SendRemindersCommandTests(TestCase):
         out = StringIO()
         call_command('send_reminders', stdout=out)
 
-        mock_send_mail.assert_not_called()
+        mock_send_email.assert_not_called()
         self.assertIn('no cards due', out.getvalue())
 
-    @patch('cards.management.commands.send_reminders.send_mail')
-    def test_handle_skips_wrong_day_weekly(self, mock_send_mail):
+    @patch('cards.management.commands.send_reminders.send_branded_email')
+    def test_handle_skips_wrong_day_weekly(self, mock_send_email):
         """Should skip weekly reminders on non-Monday."""
         self.reminder.frequency = ReviewReminder.Frequency.WEEKLY
         self.reminder.save()
@@ -1885,10 +1885,10 @@ class SendRemindersCommandTests(TestCase):
             out = StringIO()
             call_command('send_reminders', stdout=out)
 
-        mock_send_mail.assert_not_called()
+        mock_send_email.assert_not_called()
 
-    @patch('cards.management.commands.send_reminders.send_mail')
-    def test_handle_sends_on_monday_weekly(self, mock_send_mail):
+    @patch('cards.management.commands.send_reminders.send_branded_email')
+    def test_handle_sends_on_monday_weekly(self, mock_send_email):
         """Should send weekly reminders on Monday."""
         self.reminder.frequency = ReviewReminder.Frequency.WEEKLY
         self.reminder.save()
@@ -1904,15 +1904,17 @@ class SendRemindersCommandTests(TestCase):
             out = StringIO()
             call_command('send_reminders', stdout=out)
 
-        mock_send_mail.assert_called_once()
+        mock_send_email.assert_called_once()
 
-    @patch('cards.management.commands.send_reminders.send_mail')
-    def test_handle_multiple_users(self, mock_send_mail):
+    @patch('cards.management.commands.send_reminders.send_branded_email')
+    def test_handle_multiple_users(self, mock_send_email):
         """Should handle multiple users with reminders."""
+        from cards.models import UserPreferences as UP
         # Create second user with reminder and due cards
         user2 = User.objects.create_user(
             username='user2', email='user2@example.com', password='pass'
         )
+        UP.objects.create(user=user2)
         deck2 = Deck.objects.create(name='Deck 2', owner=user2)
         Card.objects.create(
             deck=deck2,
@@ -1928,7 +1930,7 @@ class SendRemindersCommandTests(TestCase):
         out = StringIO()
         call_command('send_reminders', stdout=out)
 
-        self.assertEqual(mock_send_mail.call_count, 2)
+        self.assertEqual(mock_send_email.call_count, 2)
         self.assertIn('Sent 2 reminder', out.getvalue())
 
 
@@ -1990,8 +1992,8 @@ class EmailVerificationViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Check your email')
 
-    @patch('cards.views.auth.send_mail')
-    def test_register_sends_verification_email(self, mock_send_mail):
+    @patch('cards.views.auth.send_branded_email')
+    def test_register_sends_verification_email(self, mock_send_email):
         """Registration should send verification email."""
         self.client.post(reverse('register'), {
             'username': 'newuser',
@@ -1999,10 +2001,10 @@ class EmailVerificationViewTests(TestCase):
             'password1': 'SecurePass123!',
             'password2': 'SecurePass123!',
         })
-        mock_send_mail.assert_called_once()
-        call_args = mock_send_mail.call_args
-        self.assertEqual(call_args[1]['recipient_list'], ['new@example.com'])
-        self.assertIn('verify', call_args[1]['subject'].lower())
+        mock_send_email.assert_called_once()
+        call_args = mock_send_email.call_args
+        self.assertEqual(call_args.kwargs['user'].email, 'new@example.com')
+        self.assertIn('verify', call_args.kwargs['subject'].lower())
 
     def test_verify_email_activates_user(self):
         """Clicking verification link should activate user."""
@@ -2053,8 +2055,8 @@ class EmailVerificationViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'email')
 
-    @patch('cards.views.auth.send_mail')
-    def test_resend_verification_sends_email(self, mock_send_mail):
+    @patch('cards.views.auth.send_branded_email')
+    def test_resend_verification_sends_email(self, mock_send_email):
         """Resend verification should send email to unverified user."""
         user = User.objects.create_user(
             username='newuser',
@@ -2067,19 +2069,19 @@ class EmailVerificationViewTests(TestCase):
             'email': 'new@example.com'
         })
         self.assertRedirects(response, reverse('verification_sent'))
-        mock_send_mail.assert_called_once()
+        mock_send_email.assert_called_once()
 
-    @patch('cards.views.auth.send_mail')
-    def test_resend_verification_nonexistent_email(self, mock_send_mail):
+    @patch('cards.views.auth.send_branded_email')
+    def test_resend_verification_nonexistent_email(self, mock_send_email):
         """Resend with nonexistent email should not reveal account existence."""
         response = self.client.post(reverse('resend_verification'), {
             'email': 'nonexistent@example.com'
         })
         self.assertRedirects(response, reverse('verification_sent'))
-        mock_send_mail.assert_not_called()
+        mock_send_email.assert_not_called()
 
-    @patch('cards.views.auth.send_mail')
-    def test_resend_verification_active_user(self, mock_send_mail):
+    @patch('cards.views.auth.send_branded_email')
+    def test_resend_verification_active_user(self, mock_send_email):
         """Resend for active user should not send email."""
         User.objects.create_user(
             username='activeuser',
@@ -2092,7 +2094,7 @@ class EmailVerificationViewTests(TestCase):
             'email': 'active@example.com'
         })
         self.assertRedirects(response, reverse('verification_sent'))
-        mock_send_mail.assert_not_called()
+        mock_send_email.assert_not_called()
 
     def test_inactive_user_cannot_login(self):
         """Inactive user should not be able to login."""

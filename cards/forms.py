@@ -88,15 +88,54 @@ class UserPreferencesForm(StyledFormMixin, forms.ModelForm):
 
     class Meta:
         model = UserPreferences
-        fields = ['theme', 'card_text_size', 'cards_per_session']
+        fields = [
+            'theme', 'card_text_size', 'cards_per_session',
+            'email_study_reminders', 'email_streak_reminders',
+            'email_weekly_stats', 'email_inactivity_nudge',
+            'email_achievement_notifications', 'email_unsubscribed',
+        ]
 
 
 class ReviewReminderForm(StyledFormMixin, forms.ModelForm):
     """Form for review reminder settings."""
 
+    # Day checkboxes for custom frequency
+    DAY_CHOICES = [
+        ('0', 'Monday'),
+        ('1', 'Tuesday'),
+        ('2', 'Wednesday'),
+        ('3', 'Thursday'),
+        ('4', 'Friday'),
+        ('5', 'Saturday'),
+        ('6', 'Sunday'),
+    ]
+
+    custom_days_checkboxes = forms.MultipleChoiceField(
+        choices=DAY_CHOICES,
+        widget=forms.CheckboxSelectMultiple(),
+        required=False,
+        label='Days to receive reminders',
+    )
+
     class Meta:
         model = ReviewReminder
-        fields = ['enabled', 'frequency', 'preferred_time', 'custom_days']
+        fields = ['enabled', 'frequency', 'preferred_time']
         widgets = {
             'preferred_time': forms.TimeInput(attrs={'type': 'time'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Initialize checkboxes from existing custom_days value
+        if self.instance and self.instance.custom_days:
+            days = [d.strip() for d in self.instance.custom_days.split(',') if d.strip()]
+            self.fields['custom_days_checkboxes'].initial = days
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        # Convert checkboxes back to comma-separated string
+        selected_days = self.cleaned_data.get('custom_days_checkboxes', [])
+        instance.custom_days = ','.join(sorted(selected_days))
+        if commit:
+            instance.save()
+        return instance

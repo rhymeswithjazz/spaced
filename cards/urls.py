@@ -40,4 +40,12 @@ urlpatterns = [
     # API
     path('api/theme/', views.api_set_theme, name='api_set_theme'),
     path('api/theme/get/', views.api_get_theme, name='api_get_theme'),
+
+    # Email preferences (no login required - uses token)
+    path('email/unsubscribe/<uuid:token>/', views.unsubscribe, name='email_unsubscribe'),
+    path('email/unsubscribe/<uuid:token>/<str:email_type>/', views.unsubscribe_type, name='email_unsubscribe_type'),
+    path('email/preferences/<uuid:token>/', views.manage_preferences, name='email_preferences'),
+
+    # Email preview (staff only, DEBUG mode only)
+    path('email/preview/<str:email_type>/', views.preview_email, name='email_preview'),
 ]

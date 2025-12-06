@@ -1,0 +1,103 @@
+{% extends "emails/base.html" %}
+
+{% block title %}Your Weekly Progress - Spaced{% endblock %}
+
+{% block content %}
+<h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 600; color: {{ colors.primary_text }}; line-height: 1.3;">
+  Your Weekly Progress
+</h1>
+
+<p style="margin: 0 0 24px 0; font-size: 14px; color: {{ colors.secondary_text }};">
+  {{ week_start|date:"M j" }} - {{ week_end|date:"M j, Y" }}
+</p>
+
+<p style="margin: 0 0 24px 0; font-size: 16px; color: {{ colors.secondary_text }}; line-height: 1.6;">
+  Hi {{ username }}, here's your learning summary for the week.
+</p>
+
+<!-- Stats Grid -->
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin: 0 0 24px 0;">
+  <tr>
+    <td width="48%" style="padding: 20px; background-color: {% if theme == 'dark' %}#1e293b{% else %}#f0f9ff{% endif %}; border-radius: 12px; text-align: center; vertical-align: top;">
+      <p style="margin: 0 0 4px 0; font-size: 32px; font-weight: 700; color: {{ colors.accent }};">
+        {{ cards_reviewed }}
+      </p>
+      <p style="margin: 0; font-size: 13px; color: {{ colors.secondary_text }};">
+        Cards Reviewed
+      </p>
+    </td>
+    <td width="4%"></td>
+    <td width="48%" style="padding: 20px; background-color: {% if theme == 'dark' %}#1e293b{% else %}#f0f9ff{% endif %}; border-radius: 12px; text-align: center; vertical-align: top;">
+      <p style="margin: 0 0 4px 0; font-size: 32px; font-weight: 700; color: {{ colors.accent }};">
+        {{ current_streak }}
+      </p>
+      <p style="margin: 0; font-size: 13px; color: {{ colors.secondary_text }};">
+        Day Streak
+      </p>
+    </td>
+  </tr>
+</table>
+
+<!-- Week Comparison -->
+{% if cards_reviewed_last_week is not None %}
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin: 0 0 24px 0;">
+  <tr>
+    <td style="padding: 16px; background-color: {% if theme == 'dark' %}#1e293b{% else %}#f8fafc{% endif %}; border-radius: 8px;">
+      <p style="margin: 0 0 8px 0; font-size: 14px; color: {{ colors.secondary_text }};">
+        Compared to last week
+      </p>
+      {% if cards_reviewed > cards_reviewed_last_week %}
+      <p style="margin: 0; font-size: 16px; color: {{ colors.success }}; font-weight: 600;">
+        +{{ cards_reviewed|add:cards_reviewed_last_week|default:0 }} more cards reviewed
+      </p>
+      {% elif cards_reviewed < cards_reviewed_last_week %}
+      <p style="margin: 0; font-size: 16px; color: {{ colors.warning }}; font-weight: 600;">
+        {{ cards_reviewed_last_week|add:cards_reviewed|default:0 }} fewer cards reviewed
+      </p>
+      {% else %}
+      <p style="margin: 0; font-size: 16px; color: {{ colors.primary_text }}; font-weight: 600;">
+        Same as last week
+      </p>
+      {% endif %}
+    </td>
+  </tr>
+</table>
+{% endif %}
+
+<!-- Average Rating -->
+{% if average_rating %}
+<p style="margin: 0 0 8px 0; font-size: 14px; color: {{ colors.secondary_text }};">
+  Average rating this week
+</p>
+{% include "emails/components/progress_bar.html" with percentage=average_rating_percentage show_percentage=False %}
+<p style="margin: 4px 0 24px 0; font-size: 13px; color: {{ colors.secondary_text }};">
+  {{ average_rating|floatformat:1 }} out of 5
+</p>
+{% endif %}
+
+<!-- Deck Breakdown -->
+{% if deck_stats %}
+<h2 style="margin: 24px 0 16px 0; font-size: 18px; font-weight: 600; color: {{ colors.primary_text }};">
+  By Deck
+</h2>
+{% for deck in deck_stats %}
+{% include "emails/components/stat_row.html" with label=deck.name value=deck.count %}
+{% endfor %}
+{% endif %}
+
+<!-- CTA -->
+{% if cards_due > 0 %}
+<p style="margin: 24px 0 0 0; font-size: 16px; color: {{ colors.primary_text }}; line-height: 1.6;">
+  You have <strong>{{ cards_due }} card{{ cards_due|pluralize }}</strong> waiting for review.
+</p>
+{% include "emails/components/button.html" with url=review_url text="Continue Learning" %}
+{% else %}
+<p style="margin: 24px 0 0 0; font-size: 16px; color: {{ colors.success }}; line-height: 1.6; text-align: center;">
+  You're all caught up! Great job!
+</p>
+{% endif %}
+
+<p style="margin: 24px 0 0 0; font-size: 14px; color: {{ colors.secondary_text }}; line-height: 1.6; text-align: center;">
+  Keep up the great work!
+</p>
+{% endblock %}

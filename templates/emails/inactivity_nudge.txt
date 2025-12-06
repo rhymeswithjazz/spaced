@@ -1,0 +1,21 @@
+{% extends "emails/base.txt" %}
+
+{% block content %}
+We miss you, {{ username }}!
+
+It's been {{ days_inactive }} day{{ days_inactive|pluralize }} since your last study session.
+
+{% if cards_due > 0 %}Cards waiting for you: {{ cards_due }}
+
+{% endif %}Getting back into learning is easier than you think. Start with just 5 minutes today, and you'll be back on track before you know it.
+
+Resume learning: {{ review_url }}
+
+TIPS TO GET BACK ON TRACK
+-------------------------
+1. Start with just 5-10 cards to ease back in
+2. Set a daily reminder for the same time each day
+3. Pair studying with an existing habit (like morning coffee)
+
+We're here to help you learn!
+{% endblock %}

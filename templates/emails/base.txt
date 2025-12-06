@@ -1,0 +1,8 @@
+{% block content %}{% endblock %}
+
+---
+You're receiving this email because you have an account on Spaced.
+
+Unsubscribe: {{ unsubscribe_url }}
+Email preferences: {{ preferences_url }}
+Open Spaced: {{ app_url }}

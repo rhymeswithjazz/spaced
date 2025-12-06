@@ -1,0 +1,17 @@
+{% extends "emails/base.txt" %}
+
+{% block content %}
+Congratulations, {{ username }}!
+
+{{ achievement_title }}
+
+{{ achievement_description }}
+
+{% if achievement_stat %}{{ achievement_stat_label }}: {{ achievement_stat }}
+
+{% endif %}Your dedication to learning is paying off. Keep up the amazing work!
+
+Keep learning: {{ review_url }}
+
+More achievements await you!
+{% endblock %}

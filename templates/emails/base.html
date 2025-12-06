@@ -1,0 +1,119 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>{% block title %}Spaced{% endblock %}</title>
+  <!-- Google Fonts - Space Grotesk for logo -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700&display=swap" rel="stylesheet">
+  <!--[if mso]>
+  <noscript>
+    <xml>
+      <o:OfficeDocumentSettings>
+        <o:PixelsPerInch>96</o:PixelsPerInch>
+      </o:OfficeDocumentSettings>
+    </xml>
+  </noscript>
+  <![endif]-->
+  <style type="text/css">
+    /* Reset styles */
+    body, table, td, p, a, li, blockquote {
+      -webkit-text-size-adjust: 100%;
+      -ms-text-size-adjust: 100%;
+    }
+    table, td {
+      mso-table-lspace: 0pt;
+      mso-table-rspace: 0pt;
+    }
+    img {
+      -ms-interpolation-mode: bicubic;
+      border: 0;
+      height: auto;
+      line-height: 100%;
+      outline: none;
+      text-decoration: none;
+    }
+    body {
+      margin: 0 !important;
+      padding: 0 !important;
+      width: 100% !important;
+    }
+    a[x-apple-data-detectors] {
+      color: inherit !important;
+      text-decoration: none !important;
+    }
+    @media screen and (max-width: 600px) {
+      .container {
+        width: 100% !important;
+        padding: 16px !important;
+      }
+      .content-cell {
+        padding: 24px 16px !important;
+      }
+    }
+  </style>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 16px; line-height: 1.6; background-color: {{ colors.background }};">
+  <!-- Wrapper table -->
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: {{ colors.background }};">
+    <tr>
+      <td align="center" style="padding: 40px 16px;">
+        <!-- Main container -->
+        <table role="presentation" class="container" cellpadding="0" cellspacing="0" border="0" width="600" style="max-width: 600px; width: 100%;">
+
+          <!-- Header with logo -->
+          <tr>
+            <td align="center" style="padding: 0 0 32px 0;">
+              <a href="{{ app_url }}" style="text-decoration: none;">
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto;">
+                  <tr>
+                    <td style="vertical-align: middle; padding-right: 12px;">
+                      <img src="cid:logo" alt="" width="32" height="32" style="display: block;">
+                    </td>
+                    <td style="vertical-align: middle;">
+                      <span style="font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 28px; font-weight: 700; color: #ffffff; letter-spacing: 0.4em; text-transform: lowercase;">spaced</span>
+                    </td>
+                  </tr>
+                </table>
+              </a>
+            </td>
+          </tr>
+
+          <!-- Content area -->
+          <tr>
+            <td>
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: {{ colors.card_background }}; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <tr>
+                  <td class="content-cell" style="padding: 40px 32px;">
+                    {% block content %}{% endblock %}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 32px 16px; text-align: center;">
+              <p style="margin: 0 0 8px 0; font-size: 13px; color: {{ colors.secondary_text }};">
+                You're receiving this email because you have an account on Spaced.
+              </p>
+              <p style="margin: 0; font-size: 13px; color: {{ colors.secondary_text }};">
+                <a href="{{ unsubscribe_url }}" style="color: {{ colors.accent }}; text-decoration: underline;">Unsubscribe</a>
+                &nbsp;&middot;&nbsp;
+                <a href="{{ preferences_url }}" style="color: {{ colors.accent }}; text-decoration: underline;">Email preferences</a>
+                &nbsp;&middot;&nbsp;
+                <a href="{{ app_url }}" style="color: {{ colors.accent }}; text-decoration: underline;">Open Spaced</a>
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

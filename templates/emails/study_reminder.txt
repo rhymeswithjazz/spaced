@@ -1,0 +1,15 @@
+{% extends "emails/base.txt" %}
+
+{% block content %}
+Hi {{ username }},
+
+You have {{ due_count }} card{{ due_count|pluralize }} due for review.
+
+Consistent review is key to effective learning. Take a few minutes to review your cards today!
+
+Start reviewing: {{ review_url }}
+
+{% if current_streak and current_streak > 0 %}Current streak: {{ current_streak }} day{{ current_streak|pluralize }}
+
+{% endif %}Happy studying!
+{% endblock %}

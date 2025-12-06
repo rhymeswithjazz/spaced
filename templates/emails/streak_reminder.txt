@@ -1,0 +1,15 @@
+{% extends "emails/base.txt" %}
+
+{% block content %}
+Don't lose your {{ current_streak }}-day streak!
+
+Hi {{ username }}, you haven't studied yet today.
+
+Current streak: {{ current_streak }} day{{ current_streak|pluralize }}
+
+{% if hours_remaining %}You have {{ hours_remaining }} hour{{ hours_remaining|pluralize }} left to keep your streak alive.{% else %}Review just one card to keep your streak going!{% endif %}
+
+Study now: {{ review_url }}
+
+Even reviewing a single card counts!
+{% endblock %}

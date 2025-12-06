@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+
+{% block title %}Email Preferences - Spaced{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-slate-50 dark:bg-slate-900 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-lg mx-auto">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+                Email Preferences
+            </h1>
+            <p class="text-slate-600 dark:text-slate-400">
+                Manage your email notifications, {{ username }}
+            </p>
+        </div>
+
+        {% if messages %}
+        <div class="mb-6">
+            {% for message in messages %}
+            <div class="rounded-lg p-4 {% if message.tags == 'success' %}bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200{% else %}bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200{% endif %}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+            {% if email_unsubscribed %}
+            <!-- Unsubscribed state -->
+            <div class="p-6 text-center">
+                <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
+                    <svg class="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                    </svg>
+                </div>
+                <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+                    You're unsubscribed from all emails
+                </h2>
+                <p class="text-slate-600 dark:text-slate-400 mb-6">
+                    You won't receive any emails from Spaced except for essential account notifications.
+                </p>
+                <form method="post">
+                    {% csrf_token %}
+                    <button type="submit" name="resubscribe" value="1" class="inline-flex items-center px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors">
+                        Resubscribe to emails
+                    </button>
+                </form>
+            </div>
+            {% else %}
+            <!-- Preference toggles -->
+            <form method="post">
+                {% csrf_token %}
+                <div class="divide-y divide-slate-200 dark:divide-slate-700">
+                    {% for email_type in email_types %}
+                    <label class="flex items-start p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                        <div class="flex-1">
+                            <p class="font-medium text-slate-900 dark:text-white">
+                                {{ email_type.label }}
+                            </p>
+                            <p class="text-sm text-slate-500 dark:text-slate-400">
+                                {{ email_type.description }}
+                            </p>
+                        </div>
+                        <div class="ml-4 flex-shrink-0">
+                            <input type="checkbox" name="{{ email_type.field }}" {% if email_type.enabled %}checked{% endif %}
+                                   class="w-5 h-5 rounded border-slate-300 dark:border-slate-600 text-primary-600 focus:ring-primary-500 dark:bg-slate-700">
+                        </div>
+                    </label>
+                    {% endfor %}
+                </div>
+
+                <div class="p-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-700">
+                    <button type="submit" class="w-full px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors">
+                        Save preferences
+                    </button>
+                </div>
+            </form>
+
+            <!-- Unsubscribe all option -->
+            <div class="p-4 border-t border-slate-200 dark:border-slate-700">
+                <form method="post">
+                    {% csrf_token %}
+                    <button type="submit" name="unsubscribe_all" value="1" class="w-full text-center text-sm text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors">
+                        Unsubscribe from all emails
+                    </button>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+
+        <p class="mt-6 text-center text-sm text-slate-500 dark:text-slate-400">
+            <a href="/" class="text-primary-600 hover:text-primary-700 dark:text-primary-400">
+                ← Back to Spaced
+            </a>
+        </p>
+    </div>
+</div>
+{% endblock %}

@@ -12,6 +12,7 @@ from django.views.decorators.http import require_POST
 
 from ..models import Deck, Card
 from .. import cloze
+from ..achievements import check_and_send_achievements
 from .helpers import get_or_create_preferences
 
 
@@ -110,6 +111,13 @@ def review_card(request, pk):
         return JsonResponse({'error': 'Quality must be 0-5'}, status=400)
 
     card.review(quality)
+
+    # Update user's streak
+    prefs = get_or_create_preferences(request.user)
+    prefs.update_streak()
+
+    # Check for achievements (sends emails asynchronously-safe)
+    check_and_send_achievements(request.user)
 
     return JsonResponse({
         'success': True,

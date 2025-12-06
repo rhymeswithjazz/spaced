@@ -3,35 +3,26 @@
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login, logout
-from django.core.mail import send_mail
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views import View
 from django.views.decorators.http import require_POST
 
 from ..forms import LoginForm, RegisterForm
 from ..models import UserPreferences, EmailVerificationToken
+from ..email import send_branded_email
 from .helpers import get_or_create_preferences
 
 
 def send_verification_email(user, token, request):
     """Send email verification link to user."""
     verification_url = request.build_absolute_uri(f'/verify-email/{token.token}/')
-    subject = 'Verify your email address'
-    message = f"""Hi {user.username},
 
-Thanks for creating an account! Please verify your email address by clicking the link below:
-
-{verification_url}
-
-This link will expire in 24 hours.
-
-If you didn't create an account, you can safely ignore this email.
-"""
-    send_mail(
-        subject=subject,
-        message=message,
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        recipient_list=[user.email],
+    send_branded_email(
+        user=user,
+        subject='Verify your email address',
+        template_name='emails/verification',
+        context={'verification_url': verification_url},
+        request=request,
         fail_silently=False,
     )
 

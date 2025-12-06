@@ -9,8 +9,14 @@ A self-hosted spaced repetition flashcard application built with Django. Designe
 - Multiple card types (Basic, Cloze deletion, Reverse)
 - SM-2 spaced repetition algorithm for optimal review scheduling
 - Email verification for new accounts
-- Email reminders for due reviews
-- Light/dark mode with system preference detection
+- Comprehensive email notification system:
+  - Study reminders for due cards
+  - Streak alerts when streak is at risk
+  - Weekly progress reports
+  - Inactivity nudges after 3 days
+  - Achievement celebrations for milestones
+- User email preferences with per-type toggles and global unsubscribe
+- Light/dark mode with system preference detection (emails respect user theme)
 - SQLite database for simple deployment
 
 ## Tech Stack
@@ -49,9 +55,10 @@ Deck (name, description, owner)
        └── ReviewLog (quality, timestamps, before/after states)
 
 User
-  ├── UserPreferences (theme, cards_per_session)
+  ├── UserPreferences (theme, cards_per_session, email preferences, streak tracking)
   ├── ReviewReminder (frequency, preferred_time)
-  └── EmailVerificationToken (token, created_at, expires after 24h)
+  ├── EmailVerificationToken (token, created_at, expires after 24h)
+  └── EmailLog (email_type, subject, sent_at - for deduplication)
 ```
 
 ### Card Types
@@ -76,7 +83,7 @@ flashcard/
 │   ├── urls.py
 │   └── wsgi.py
 ├── cards/                   # Main application
-│   ├── models.py            # Deck, Card, ReviewLog, UserPreferences
+│   ├── models.py            # Deck, Card, ReviewLog, UserPreferences, EmailLog
 │   ├── views/               # Views split by feature
 │   │   ├── __init__.py      # Exports all views
 │   │   ├── auth.py          # Login, Register, logout
@@ -85,19 +92,35 @@ flashcard/
 │   │   ├── card.py          # Card CRUD
 │   │   ├── review.py        # Review session, API
 │   │   ├── settings.py      # Settings, theme API
+│   │   ├── email.py         # Unsubscribe, email preference management
 │   │   └── helpers.py       # Shared utilities
 │   ├── forms.py             # Django forms with Tailwind styling
 │   ├── urls.py              # URL routing
 │   ├── srs.py               # SM-2 algorithm (pure functions)
 │   ├── cloze.py             # Cloze deletion parsing/rendering (pure functions)
+│   ├── email.py             # Email utility module (send_branded_email)
+│   ├── achievements.py      # Achievement checking and notifications
 │   ├── admin.py             # Admin interface
 │   ├── context_processors.py # User theme context
 │   ├── tests.py             # Unit tests (177 tests)
 │   ├── templates/cards/     # App templates
+│   │   └── email/           # Email preference pages
 │   └── management/commands/
-│       └── send_reminders.py
+│       ├── send_reminders.py
+│       ├── send_streak_reminders.py
+│       ├── send_weekly_stats.py
+│       └── send_inactivity_nudges.py
 ├── templates/
-│   └── base.html            # Base template with nav, theme toggle
+│   ├── base.html            # Base template with nav, theme toggle
+│   └── emails/              # Email templates (HTML + plain text)
+│       ├── base.html/txt    # Base email template with branding
+│       ├── verification.*   # Email verification
+│       ├── study_reminder.* # Daily study reminders
+│       ├── streak_reminder.* # Streak at risk alerts
+│       ├── weekly_stats.*   # Weekly progress report
+│       ├── inactivity_nudge.* # Re-engagement emails
+│       ├── achievement.*    # Milestone celebrations
+│       └── components/      # Reusable email components
 ├── data/                    # SQLite database (Docker volume)
 ├── Dockerfile
 ├── docker-compose.yml
@@ -168,16 +191,56 @@ docker compose exec web uv run python manage.py createsuperuser
 3. Set environment variables in Portainer UI
 4. Deploy stack
 
-### Email Reminders
+### Email System
 
-Set up a cron job or scheduled task to run:
+The app includes a comprehensive branded email system with light/dark mode support.
+
+#### Email Types
+1. **Study Reminders** - Daily reminders when cards are due
+2. **Streak Alerts** - Warns users when their streak is at risk
+3. **Weekly Stats** - Sunday progress report with statistics
+4. **Inactivity Nudge** - Re-engagement after 3+ days inactive
+5. **Achievements** - Celebrates milestones (100 cards, 7/30/100 day streaks)
+
+#### User Preferences
+- Per-email-type toggles in Settings page
+- Global unsubscribe option
+- One-click unsubscribe links in emails (no login required)
+- Email preference management page via token URL
+
+#### Cron Schedule (Recommended)
 ```bash
-docker compose exec web uv run python manage.py send_reminders
+# Study reminders - hourly check
+0 * * * * docker compose exec web uv run python manage.py send_reminders
+
+# Streak reminders - every 2 hours from noon to 10pm
+0 12,14,16,18,20,22 * * * docker compose exec web uv run python manage.py send_streak_reminders
+
+# Weekly stats - Sundays at 9am
+0 9 * * 0 docker compose exec web uv run python manage.py send_weekly_stats
+
+# Inactivity nudges - daily at 10am
+0 10 * * * docker compose exec web uv run python manage.py send_inactivity_nudges
 ```
 
-Recommended: Daily at user's preferred reminder time.
-
 ## Recent Major Changes
+
+### 2025-12-06 - Comprehensive Email System Overhaul
+- **What**: Complete rewrite of email system with branded templates, multiple email types, and user preferences
+- **Why**: Previous system was plain text only, limited to study reminders, no user control
+- **Impact**: Professional branded emails that respect user theme preference and granular notification controls
+- **Features**:
+  - **Branded HTML Templates**: All emails use consistent branding with "Spaced" logo, sky blue (#0ea5e9) accent color
+  - **Light/Dark Mode**: Emails render in user's preferred theme (SYSTEM defaults to light)
+  - **5 Email Types**: Study reminders, streak alerts, weekly stats, inactivity nudges, achievements
+  - **User Preferences**: Per-type toggles in Settings, global unsubscribe option
+  - **One-Click Unsubscribe**: Token-based unsubscribe links work without login
+  - **Email Preference Page**: Manage preferences via token URL from any email
+  - **Streak Tracking**: UserPreferences now tracks current_streak, longest_streak, last_study_date
+  - **Achievement System**: Automatic milestone detection (first review, 100/500/1000 cards, 7/30/100 day streaks)
+  - **Deduplication**: EmailLog model prevents duplicate emails same day/week
+  - **New Management Commands**: send_streak_reminders, send_weekly_stats, send_inactivity_nudges
+- **Migration**: Run `uv run python manage.py migrate` for new email preference fields
 
 ### 2025-12-06 - Deck Reset & Due/New Card Separation
 - **What**: Added deck reset functionality and fixed how new vs due cards are counted

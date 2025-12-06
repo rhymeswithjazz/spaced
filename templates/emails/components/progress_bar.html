@@ -1,0 +1,29 @@
+{# Progress bar component for emails #}
+{# Usage: {% include "emails/components/progress_bar.html" with label="Weekly Progress" percentage=75 %} #}
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin: 16px 0;">
+  <tr>
+    <td>
+      {% if label %}
+      <p style="margin: 0 0 8px 0; font-size: 14px; color: {{ colors.secondary_text }};">
+        {{ label }}
+      </p>
+      {% endif %}
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+        <tr>
+          <td style="background-color: {{ colors.border }}; border-radius: 4px; height: 8px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="{{ percentage }}%" style="max-width: 100%;">
+              <tr>
+                <td style="background-color: {{ colors.accent_light }}; border-radius: 4px; height: 8px;"></td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+      {% if show_percentage %}
+      <p style="margin: 4px 0 0 0; font-size: 13px; color: {{ colors.secondary_text }}; text-align: right;">
+        {{ percentage }}%
+      </p>
+      {% endif %}
+    </td>
+  </tr>
+</table>

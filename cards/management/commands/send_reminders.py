@@ -7,15 +7,13 @@ Run this command via cron or a scheduled task:
 For Docker deployment, add to crontab or use a scheduler container.
 """
 
-from datetime import datetime
-
-from django.core.mail import send_mail
-from django.core.management.base import BaseCommand
 from django.conf import settings
+from django.core.management.base import BaseCommand
 from django.utils import timezone
 from django.contrib.auth.models import User
 
-from cards.models import ReviewReminder, Card
+from cards.models import ReviewReminder, Card, EmailLog
+from cards.email import send_branded_email, can_send_email
 
 
 class Command(BaseCommand):
@@ -40,6 +38,17 @@ class Command(BaseCommand):
                 continue
 
             user = reminder.user
+
+            # Check user email preferences
+            if not can_send_email(user, 'study_reminders'):
+                self.stdout.write(f"Skipping {user.username}: email preferences disabled")
+                continue
+
+            # Check if already sent today
+            if EmailLog.was_sent_today(user, EmailLog.EmailType.STUDY_REMINDER):
+                self.stdout.write(f"Skipping {user.username}: already sent today")
+                continue
+
             due_count = self._get_due_cards_count(user)
 
             if due_count == 0:
@@ -79,23 +88,36 @@ class Command(BaseCommand):
         ).count()
 
     def _send_reminder_email(self, user, due_count):
-        """Send the reminder email."""
+        """Send the reminder email using branded template."""
         subject = f"You have {due_count} flashcard{'s' if due_count != 1 else ''} to review"
-        message = f"""Hi {user.username},
 
-You have {due_count} flashcard{'s' if due_count != 1 else ''} due for review.
+        # Get current streak from preferences
+        prefs = getattr(user, 'preferences', None)
+        current_streak = prefs.current_streak if prefs else 0
 
-Consistent review is key to effective learning. Take a few minutes to review your cards today!
+        # Build review URL
+        base_url = getattr(settings, 'SITE_URL', 'http://localhost:8000').rstrip('/')
+        review_url = f'{base_url}/review/'
 
-Happy studying!
-"""
+        context = {
+            'due_count': due_count,
+            'current_streak': current_streak,
+            'review_url': review_url,
+        }
 
-        send_mail(
+        send_branded_email(
+            user=user,
             subject=subject,
-            message=message,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[user.email],
+            template_name='emails/study_reminder',
+            context=context,
             fail_silently=False,
+        )
+
+        # Log the email
+        EmailLog.objects.create(
+            user=user,
+            email_type=EmailLog.EmailType.STUDY_REMINDER,
+            subject=subject,
         )
 
         self.stdout.write(f"Sent reminder to {user.email}: {due_count} cards due")
