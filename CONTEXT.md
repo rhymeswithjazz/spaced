@@ -94,6 +94,7 @@ flashcard/
 │   │   ├── review.py        # Review session, API
 │   │   ├── settings.py      # Settings, theme API
 │   │   ├── email.py         # Unsubscribe, email preference management
+│   │   ├── health.py        # Docker health check endpoint
 │   │   └── helpers.py       # Shared utilities
 │   ├── forms.py             # Django forms with Tailwind styling
 │   ├── urls.py              # URL routing
@@ -193,6 +194,15 @@ docker compose exec web uv run python manage.py createsuperuser
 3. Set environment variables in Portainer UI
 4. Deploy stack
 
+### Health Check
+
+The container includes a health check endpoint at `/health/` that:
+- Verifies the app is running
+- Tests database connectivity
+- Returns `{"status": "healthy"}` on success
+
+Docker checks this endpoint every 30 seconds after a 40-second start period. The health check uses Python's `urllib` (not curl) since curl isn't available in `python:3.11-slim`.
+
 ### Email System
 
 The app includes a comprehensive branded email system with light/dark mode support.
@@ -249,6 +259,14 @@ uv run python manage.py send_test_email <username> study_reminder --theme=dark
 ```
 
 ## Recent Major Changes
+
+### 2025-12-06 - Docker Health Check Fix
+- **What**: Fixed container health check always reporting unhealthy in Portainer
+- **Why**: Previous health check used `curl` (not installed in python:3.11-slim) and checked `/admin/` (returns 302 redirect)
+- **Impact**: Container now correctly reports healthy status in Docker/Portainer
+- **Changes**:
+  - Added `/health/` endpoint that verifies database connectivity
+  - Changed health check to use Python's `urllib` instead of curl
 
 ### 2025-12-06 - CI Workflow Optimization
 - **What**: Added path filtering to skip CI for documentation-only changes
