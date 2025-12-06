@@ -18,6 +18,7 @@ from .deck import (
     deck_detail,
     deck_export,
     deck_import,
+    deck_reset,
 )
 from .card import CardCreateView, CardUpdateView, CardDeleteView
 from .review import review_session, review_card
@@ -43,6 +44,7 @@ __all__ = [
     'deck_detail',
     'deck_export',
     'deck_import',
+    'deck_reset',
     # Card
     'CardCreateView',
     'CardUpdateView',

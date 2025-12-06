@@ -6,9 +6,10 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Count, Q
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
+from django.views.decorators.http import require_POST
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy
 
@@ -190,3 +191,37 @@ def deck_import(request):
 
     # GET request - show import form
     return render(request, 'cards/deck_import.html')
+
+
+@login_required
+@require_POST
+def deck_reset(request, pk):
+    """Reset all cards in a deck to their initial state."""
+    deck = get_object_or_404(Deck, pk=pk, owner=request.user)
+
+    # Verify deck name matches for confirmation
+    confirm_name = request.POST.get('confirm_name', '').strip()
+    if confirm_name != deck.name:
+        return JsonResponse({
+            'success': False,
+            'error': 'Deck name does not match'
+        }, status=400)
+
+    # Reset all cards in the deck
+    card_count = deck.cards.update(
+        ease_factor=2.5,
+        interval=0,
+        repetitions=0,
+        next_review=timezone.now(),
+        last_reviewed=None
+    )
+
+    # Delete all review logs for cards in this deck
+    from ..models import ReviewLog
+    ReviewLog.objects.filter(card__deck=deck).delete()
+
+    return JsonResponse({
+        'success': True,
+        'message': f'Reset {card_count} cards in "{deck.name}"',
+        'card_count': card_count
+    })
