@@ -373,20 +373,45 @@ class DeckModelTests(TestCase):
         self.assertEqual(self.deck.cards_due_count(), 0)
 
     def test_cards_due_count_with_due_cards(self):
-        """Count only cards that are due."""
-        # Due card (next_review in past)
+        """Count only reviewed cards that are due (not new cards)."""
+        # Due card (next_review in past, has been reviewed)
         Card.objects.create(
             deck=self.deck,
             front='Due card',
-            next_review=timezone.now() - timedelta(days=1)
+            next_review=timezone.now() - timedelta(days=1),
+            repetitions=1  # Has been reviewed at least once
         )
         # Not due card (next_review in future)
         Card.objects.create(
             deck=self.deck,
             front='Not due card',
-            next_review=timezone.now() + timedelta(days=1)
+            next_review=timezone.now() + timedelta(days=1),
+            repetitions=1
+        )
+        # New card (never reviewed) - should NOT count as due
+        Card.objects.create(
+            deck=self.deck,
+            front='New card',
+            next_review=timezone.now() - timedelta(days=1),
+            repetitions=0  # Never reviewed
         )
         self.assertEqual(self.deck.cards_due_count(), 1)
+
+    def test_cards_new_count(self):
+        """Count only new cards (never reviewed)."""
+        # New card
+        Card.objects.create(
+            deck=self.deck,
+            front='New card',
+            repetitions=0
+        )
+        # Reviewed card
+        Card.objects.create(
+            deck=self.deck,
+            front='Reviewed card',
+            repetitions=1
+        )
+        self.assertEqual(self.deck.cards_new_count(), 1)
 
 
 class CardModelTests(TestCase):
@@ -1088,8 +1113,10 @@ class ReviewViewTests(TestCase):
         self.assertContains(response, 'Test Question')
 
     def test_review_session_redirects_when_no_cards_due(self):
-        """Review session should redirect when no cards are due."""
+        """Review session should redirect when no cards are due or new."""
+        # Card is not due (next_review in future) and not new (repetitions > 0)
         self.card.next_review = timezone.now() + timedelta(days=1)
+        self.card.repetitions = 1  # Not a new card
         self.card.save()
         response = self.client.get(reverse('review_session'))
         self.assertRedirects(response, reverse('dashboard'))

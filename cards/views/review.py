@@ -22,20 +22,32 @@ def review_session(request, deck_pk=None):
     preferences = get_or_create_preferences(user)
     now = timezone.now()
 
-    # Get cards due for review
-    cards_query = Card.objects.filter(
-        deck__owner=user,
-        next_review__lte=now
-    ).select_related('deck')
-
+    # Get deck filter if specified
     if deck_pk:
         deck = get_object_or_404(Deck, pk=deck_pk, owner=user)
-        cards_query = cards_query.filter(deck=deck)
+        deck_filter = {'deck': deck}
     else:
         deck = None
+        deck_filter = {'deck__owner': user}
 
-    # Limit to user's preferred session size
-    cards = list(cards_query[:preferences.cards_per_session])
+    # Prioritize due cards (already reviewed) over new cards
+    # Due cards: reviewed before, scheduled for now or earlier
+    due_cards = list(Card.objects.filter(
+        **deck_filter,
+        next_review__lte=now,
+        repetitions__gt=0
+    ).select_related('deck')[:preferences.cards_per_session])
+
+    # Fill remaining slots with new cards
+    remaining_slots = preferences.cards_per_session - len(due_cards)
+    new_cards = []
+    if remaining_slots > 0:
+        new_cards = list(Card.objects.filter(
+            **deck_filter,
+            repetitions=0
+        ).select_related('deck')[:remaining_slots])
+
+    cards = due_cards + new_cards
 
     if not cards:
         messages.info(request, 'No cards due for review!' if not deck else f'No cards due in "{deck.name}"!')
