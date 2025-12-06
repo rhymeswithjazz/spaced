@@ -23,8 +23,15 @@ class Deck(models.Model):
         return self.name
 
     def cards_due_count(self):
-        """Return count of cards due for review."""
-        return self.cards.filter(next_review__lte=timezone.now()).count()
+        """Return count of cards due for review (excludes new cards)."""
+        return self.cards.filter(
+            next_review__lte=timezone.now(),
+            repetitions__gt=0  # Exclude new cards (never reviewed)
+        ).count()
+
+    def cards_new_count(self):
+        """Return count of new cards (never reviewed)."""
+        return self.cards.filter(repetitions=0).count()
 
 
 class Card(models.Model):

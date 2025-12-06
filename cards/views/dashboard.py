@@ -22,11 +22,18 @@ def dashboard(request):
     # Get deck statistics
     decks = Deck.objects.filter(owner=user).annotate(
         card_count=Count('cards'),
-        due_count=Count('cards', filter=Q(cards__next_review__lte=now))
+        due_count=Count('cards', filter=Q(
+            cards__next_review__lte=now,
+            cards__repetitions__gt=0  # Exclude new cards
+        )),
+        new_count=Count('cards', filter=Q(cards__repetitions=0))
     )
 
     total_cards = user_cards.count()
-    total_due = user_cards.filter(next_review__lte=now).count()
+    # Due = cards that have been reviewed before and are scheduled for review
+    total_due = user_cards.filter(next_review__lte=now, repetitions__gt=0).count()
+    # New = cards that have never been reviewed
+    total_new = user_cards.filter(repetitions=0).count()
 
     # === PROGRESS STATS ===
     # Card status: New (never reviewed), Learning (interval < 21), Mature (interval >= 21)
@@ -132,6 +139,7 @@ def dashboard(request):
         'decks': decks,
         'total_cards': total_cards,
         'total_due': total_due,
+        'total_new': total_new,
         'streak': streak,
         # Progress
         'cards_new': cards_new,
