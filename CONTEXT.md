@@ -32,6 +32,7 @@ A self-hosted spaced repetition flashcard application built with Django. Designe
 ### Key Libraries
 - `django-environ` - Environment variable management
 - `gunicorn` - Production WSGI server
+- `pillow` - Image processing for email logo resizing
 
 ## Architecture
 
@@ -109,7 +110,8 @@ flashcard/
 │       ├── send_reminders.py
 │       ├── send_streak_reminders.py
 │       ├── send_weekly_stats.py
-│       └── send_inactivity_nudges.py
+│       ├── send_inactivity_nudges.py
+│       └── send_test_email.py   # For testing email templates
 ├── templates/
 │   ├── base.html            # Base template with nav, theme toggle
 │   └── emails/              # Email templates (HTML + plain text)
@@ -207,6 +209,29 @@ The app includes a comprehensive branded email system with light/dark mode suppo
 - Global unsubscribe option
 - One-click unsubscribe links in emails (no login required)
 - Email preference management page via token URL
+- Custom days selection with checkboxes (for custom reminder frequency)
+
+#### Email Branding
+- Logo embedded via CID (Content-ID) for reliable display across email clients
+- Space Grotesk font with wide letter-spacing matching app header
+- Resized to 48x48 using Pillow for optimal display
+
+#### Testing Emails
+```bash
+# Send test email to a user
+uv run python manage.py send_test_email <username> <email_type>
+
+# Available types: study_reminder, streak_reminder, weekly_stats,
+#                  inactivity_nudge, achievement, verification
+
+# Force a specific theme
+uv run python manage.py send_test_email <username> study_reminder --theme=dark
+```
+
+#### Email Preview (Staff Only)
+- Visit `/email/preview/<type>/` while logged in as staff
+- Add `?theme=dark` for dark mode preview
+- Only available when DEBUG=True
 
 #### Cron Schedule (Recommended)
 ```bash
@@ -231,15 +256,19 @@ The app includes a comprehensive branded email system with light/dark mode suppo
 - **Impact**: Professional branded emails that respect user theme preference and granular notification controls
 - **Features**:
   - **Branded HTML Templates**: All emails use consistent branding with "Spaced" logo, sky blue (#0ea5e9) accent color
+  - **Logo Embedding**: CID-embedded logo (48x48, resized from 192x192 via Pillow) for reliable display
+  - **Typography**: Space Grotesk font with 0.4em letter-spacing matching app header
   - **Light/Dark Mode**: Emails render in user's preferred theme (SYSTEM defaults to light)
   - **5 Email Types**: Study reminders, streak alerts, weekly stats, inactivity nudges, achievements
   - **User Preferences**: Per-type toggles in Settings, global unsubscribe option
+  - **Custom Days Checkboxes**: Reminder schedule uses day name checkboxes instead of number input
   - **One-Click Unsubscribe**: Token-based unsubscribe links work without login
   - **Email Preference Page**: Manage preferences via token URL from any email
   - **Streak Tracking**: UserPreferences now tracks current_streak, longest_streak, last_study_date
   - **Achievement System**: Automatic milestone detection (first review, 100/500/1000 cards, 7/30/100 day streaks)
   - **Deduplication**: EmailLog model prevents duplicate emails same day/week
-  - **New Management Commands**: send_streak_reminders, send_weekly_stats, send_inactivity_nudges
+  - **Testing Tools**: `send_test_email` command and `/email/preview/` endpoint for staff
+  - **New Management Commands**: send_streak_reminders, send_weekly_stats, send_inactivity_nudges, send_test_email
 - **Migration**: Run `uv run python manage.py migrate` for new email preference fields
 
 ### 2025-12-06 - Deck Reset & Due/New Card Separation
