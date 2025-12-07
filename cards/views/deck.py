@@ -27,7 +27,10 @@ class DeckListView(LoginRequiredMixin, ListView):
         now = timezone.now()
         return Deck.objects.filter(owner=self.request.user).annotate(
             card_count=Count('cards'),
-            due_count=Count('cards', filter=Q(cards__next_review__lte=now))
+            due_count=Count('cards', filter=Q(
+                cards__next_review__lte=now,
+                cards__repetitions__gt=0  # Exclude new cards
+            ))
         )
 
 
@@ -79,7 +82,7 @@ def deck_detail(request, pk):
     deck = get_object_or_404(Deck, pk=pk, owner=request.user)
     cards = deck.cards.all()
     now = timezone.now()
-    due_count = cards.filter(next_review__lte=now).count()
+    due_count = cards.filter(next_review__lte=now, repetitions__gt=0).count()
 
     context = {
         'deck': deck,
