@@ -24,8 +24,17 @@ class StyledFormMixin:
                     "text-primary-600 focus:ring-primary-500"
                 )
             elif isinstance(field.widget, forms.Select):
-                # Add extra right padding for the dropdown chevron
-                field.widget.attrs['class'] = base_classes + " pr-10"
+                # Custom select styling with SVG chevron for consistent cross-browser appearance
+                select_classes = (
+                    "block w-full rounded-md border-gray-300 dark:border-gray-600 "
+                    "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 "
+                    "shadow-sm focus:border-primary-500 focus:ring-primary-500 "
+                    "sm:text-sm px-3 py-2 pr-10 appearance-none cursor-pointer "
+                    "bg-no-repeat bg-[length:1.25rem_1.25rem] bg-[position:right_0.5rem_center] "
+                    "bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22%236b7280%22%3E%3Cpath%20fill-rule%3D%22evenodd%22%20d%3D%22M5.23%207.21a.75.75%200%20011.06.02L10%2011.168l3.71-3.938a.75.75%200%20111.08%201.04l-4.25%204.5a.75.75%200%2001-1.08%200l-4.25-4.5a.75.75%200%2001.02-1.06z%22%20clip-rule%3D%22evenodd%22%2F%3E%3C%2Fsvg%3E')] "
+                    "dark:bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22%239ca3af%22%3E%3Cpath%20fill-rule%3D%22evenodd%22%20d%3D%22M5.23%207.21a.75.75%200%20011.06.02L10%2011.168l3.71-3.938a.75.75%200%20111.08%201.04l-4.25%204.5a.75.75%200%2001-1.08%200l-4.25-4.5a.75.75%200%2001.02-1.06z%22%20clip-rule%3D%22evenodd%22%2F%3E%3C%2Fsvg%3E')]"
+                )
+                field.widget.attrs['class'] = select_classes
             elif isinstance(field.widget, forms.Textarea):
                 field.widget.attrs['class'] = base_classes
                 field.widget.attrs['rows'] = 3
