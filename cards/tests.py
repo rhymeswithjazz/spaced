@@ -445,20 +445,30 @@ class CardModelTests(TestCase):
         self.assertLessEqual(len(str(long_card)), 54)  # 50 chars + "..."
 
     def test_is_due_when_past(self):
-        """Card is due when next_review is in the past."""
+        """Card is due when next_review is in the past and has been reviewed."""
+        self.card.repetitions = 1  # Card has been reviewed
         self.card.next_review = timezone.now() - timedelta(hours=1)
         self.card.save()
         self.assertTrue(self.card.is_due())
 
     def test_is_due_when_now(self):
-        """Card is due when next_review is now."""
+        """Card is due when next_review is now and has been reviewed."""
+        self.card.repetitions = 1  # Card has been reviewed
         self.card.next_review = timezone.now()
         self.card.save()
         self.assertTrue(self.card.is_due())
 
     def test_is_not_due_when_future(self):
         """Card is not due when next_review is in the future."""
+        self.card.repetitions = 1  # Card has been reviewed
         self.card.next_review = timezone.now() + timedelta(hours=1)
+        self.card.save()
+        self.assertFalse(self.card.is_due())
+
+    def test_new_card_is_not_due(self):
+        """New card (never reviewed) is not considered due."""
+        self.card.repetitions = 0  # New card
+        self.card.next_review = timezone.now() - timedelta(hours=1)
         self.card.save()
         self.assertFalse(self.card.is_due())
 

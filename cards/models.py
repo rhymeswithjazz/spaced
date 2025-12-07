@@ -70,8 +70,8 @@ class Card(models.Model):
         return f"{self.front[:50]}..."
 
     def is_due(self):
-        """Check if card is due for review."""
-        return self.next_review <= timezone.now()
+        """Check if card is due for review (excludes new cards)."""
+        return self.repetitions > 0 and self.next_review <= timezone.now()
 
     def review(self, quality):
         """
