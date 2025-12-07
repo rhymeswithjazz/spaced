@@ -1,11 +1,16 @@
 """
 Management command to send review reminder emails.
 
-Run this command via cron or a scheduled task:
+Run this command via cron or a scheduled task (recommended: every 15 minutes):
     python manage.py send_reminders
 
 For Docker deployment, add to crontab or use a scheduler container.
+
+The command respects each user's preferred_time setting and will only send
+reminders within a configurable time window (default: 30 minutes) of that time.
 """
+
+from datetime import timedelta
 
 from django.conf import settings
 from django.core.management.base import BaseCommand
@@ -14,6 +19,9 @@ from django.contrib.auth.models import User
 
 from cards.models import ReviewReminder, Card, EmailLog
 from cards.email import send_branded_email, can_send_email
+
+# Default time window in minutes (send if within this many minutes of preferred time)
+DEFAULT_TIME_WINDOW = 30
 
 
 class Command(BaseCommand):
@@ -25,9 +33,16 @@ class Command(BaseCommand):
             action='store_true',
             help='Print what would be sent without actually sending emails',
         )
+        parser.add_argument(
+            '--time-window',
+            type=int,
+            default=DEFAULT_TIME_WINDOW,
+            help=f'Minutes before/after preferred time to send (default: {DEFAULT_TIME_WINDOW})',
+        )
 
     def handle(self, *args, **options):
         dry_run = options['dry_run']
+        time_window = options['time_window']
         now = timezone.now()
         current_day = now.weekday()  # 0 = Monday
 
@@ -35,6 +50,10 @@ class Command(BaseCommand):
 
         for reminder in ReviewReminder.objects.filter(enabled=True).select_related('user'):
             if not self._should_send_today(reminder, current_day, now):
+                continue
+
+            # Check if current time is within the preferred time window
+            if not self._is_within_preferred_time(reminder, now, time_window):
                 continue
 
             user = reminder.user
@@ -57,7 +76,8 @@ class Command(BaseCommand):
 
             if dry_run:
                 self.stdout.write(
-                    f"[DRY RUN] Would send to {user.email}: {due_count} cards due"
+                    f"[DRY RUN] Would send to {user.email}: {due_count} cards due "
+                    f"(preferred time: {reminder.preferred_time})"
                 )
             else:
                 self._send_reminder_email(user, due_count)
@@ -79,6 +99,35 @@ class Command(BaseCommand):
             allowed_days = [int(d) for d in reminder.custom_days.split(',') if d]
             return current_day in allowed_days
         return False
+
+    def _is_within_preferred_time(self, reminder, now, time_window_minutes):
+        """
+        Check if the current time is within the time window of the user's preferred time.
+
+        Args:
+            reminder: ReviewReminder instance with preferred_time field
+            now: Current datetime (timezone-aware)
+            time_window_minutes: Number of minutes before/after preferred time to allow
+
+        Returns:
+            True if current time is within the window, False otherwise
+        """
+        # Get current time components
+        current_time = now.time()
+        preferred = reminder.preferred_time
+
+        # Convert times to minutes since midnight for easier comparison
+        current_minutes = current_time.hour * 60 + current_time.minute
+        preferred_minutes = preferred.hour * 60 + preferred.minute
+
+        # Calculate the difference, handling midnight wraparound
+        diff = abs(current_minutes - preferred_minutes)
+
+        # Handle wraparound (e.g., preferred=23:45, current=00:15 should be 30 min apart)
+        if diff > 12 * 60:  # More than 12 hours apart, use the shorter path
+            diff = 24 * 60 - diff
+
+        return diff <= time_window_minutes
 
     def _get_due_cards_count(self, user):
         """Count cards due for review for a user."""

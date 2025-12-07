@@ -1686,11 +1686,13 @@ class SendRemindersCommandTests(TestCase):
             back='Test A',
             next_review=timezone.now() - timedelta(hours=1)
         )
-        # Create reminder for user
+        # Create reminder for user - set preferred_time to current time for tests
+        current_time = timezone.now().time()
         self.reminder = ReviewReminder.objects.create(
             user=self.user,
             enabled=True,
-            frequency=ReviewReminder.Frequency.DAILY
+            frequency=ReviewReminder.Frequency.DAILY,
+            preferred_time=current_time
         )
 
     def test_should_send_today_daily(self):
@@ -1747,6 +1749,112 @@ class SendRemindersCommandTests(TestCase):
 
         for day in range(7):
             self.assertFalse(cmd._should_send_today(self.reminder, day, timezone.now()))
+
+    def test_is_within_preferred_time_exact_match(self):
+        """Should return True when current time matches preferred time."""
+        from cards.management.commands.send_reminders import Command
+        from datetime import time
+        cmd = Command()
+
+        self.reminder.preferred_time = time(9, 0)
+        now = timezone.make_aware(datetime(2025, 12, 1, 9, 0, 0))
+
+        self.assertTrue(cmd._is_within_preferred_time(self.reminder, now, 30))
+
+    def test_is_within_preferred_time_within_window(self):
+        """Should return True when within the time window."""
+        from cards.management.commands.send_reminders import Command
+        from datetime import time
+        cmd = Command()
+
+        self.reminder.preferred_time = time(9, 0)
+
+        # 15 minutes before - should be within 30 minute window
+        now = timezone.make_aware(datetime(2025, 12, 1, 8, 45, 0))
+        self.assertTrue(cmd._is_within_preferred_time(self.reminder, now, 30))
+
+        # 15 minutes after - should be within 30 minute window
+        now = timezone.make_aware(datetime(2025, 12, 1, 9, 15, 0))
+        self.assertTrue(cmd._is_within_preferred_time(self.reminder, now, 30))
+
+    def test_is_within_preferred_time_outside_window(self):
+        """Should return False when outside the time window."""
+        from cards.management.commands.send_reminders import Command
+        from datetime import time
+        cmd = Command()
+
+        self.reminder.preferred_time = time(9, 0)
+
+        # 45 minutes before - outside 30 minute window
+        now = timezone.make_aware(datetime(2025, 12, 1, 8, 15, 0))
+        self.assertFalse(cmd._is_within_preferred_time(self.reminder, now, 30))
+
+        # 45 minutes after - outside 30 minute window
+        now = timezone.make_aware(datetime(2025, 12, 1, 9, 45, 0))
+        self.assertFalse(cmd._is_within_preferred_time(self.reminder, now, 30))
+
+    def test_is_within_preferred_time_midnight_wraparound(self):
+        """Should handle midnight wraparound correctly."""
+        from cards.management.commands.send_reminders import Command
+        from datetime import time
+        cmd = Command()
+
+        # Preferred time near midnight
+        self.reminder.preferred_time = time(23, 45)
+
+        # 15 minutes after midnight - should be within 30 minute window
+        now = timezone.make_aware(datetime(2025, 12, 2, 0, 15, 0))
+        self.assertTrue(cmd._is_within_preferred_time(self.reminder, now, 30))
+
+        # 45 minutes after midnight - outside 30 minute window
+        now = timezone.make_aware(datetime(2025, 12, 2, 0, 45, 0))
+        self.assertFalse(cmd._is_within_preferred_time(self.reminder, now, 30))
+
+    @patch('cards.management.commands.send_reminders.send_branded_email')
+    def test_handle_skips_outside_time_window(self, mock_send_email):
+        """Should skip users when outside their preferred time window."""
+        from datetime import time
+
+        # Set preferred time to 9:00 AM
+        self.reminder.preferred_time = time(9, 0)
+        self.reminder.save()
+
+        # Mock current time to 2:00 PM (5 hours after preferred time)
+        afternoon = timezone.make_aware(datetime(2025, 12, 1, 14, 0, 0))
+        self.card.next_review = afternoon - timedelta(hours=1)
+        self.card.save()
+
+        with patch('cards.management.commands.send_reminders.timezone.now', return_value=afternoon):
+            out = StringIO()
+            call_command('send_reminders', stdout=out)
+
+        mock_send_email.assert_not_called()
+        self.assertIn('Sent 0 reminder', out.getvalue())
+
+    @patch('cards.management.commands.send_reminders.send_branded_email')
+    def test_handle_time_window_argument(self, mock_send_email):
+        """Should respect custom time window argument."""
+        from datetime import time
+
+        # Set preferred time to 9:00 AM
+        self.reminder.preferred_time = time(9, 0)
+        self.reminder.save()
+
+        # Mock current time to 10:00 AM (60 minutes after preferred time)
+        morning = timezone.make_aware(datetime(2025, 12, 1, 10, 0, 0))
+        self.card.next_review = morning - timedelta(hours=1)
+        self.card.save()
+
+        with patch('cards.management.commands.send_reminders.timezone.now', return_value=morning):
+            # With default 30-minute window, should NOT send
+            out = StringIO()
+            call_command('send_reminders', stdout=out)
+            mock_send_email.assert_not_called()
+
+            # With 60-minute window, should send
+            out = StringIO()
+            call_command('send_reminders', '--time-window=60', stdout=out)
+            mock_send_email.assert_called_once()
 
     def test_get_due_cards_count(self):
         """Should count due cards for user."""
@@ -1881,6 +1989,10 @@ class SendRemindersCommandTests(TestCase):
         self.card.next_review = tuesday - timedelta(hours=1)
         self.card.save()
 
+        # Set preferred_time to match the mocked time
+        self.reminder.preferred_time = tuesday.time()
+        self.reminder.save()
+
         with patch('cards.management.commands.send_reminders.timezone.now', return_value=tuesday):
             out = StringIO()
             call_command('send_reminders', stdout=out)
@@ -1900,6 +2012,10 @@ class SendRemindersCommandTests(TestCase):
         self.card.next_review = monday - timedelta(hours=1)
         self.card.save()
 
+        # Set preferred_time to match the mocked time
+        self.reminder.preferred_time = monday.time()
+        self.reminder.save()
+
         with patch('cards.management.commands.send_reminders.timezone.now', return_value=monday):
             out = StringIO()
             call_command('send_reminders', stdout=out)
@@ -1910,6 +2026,7 @@ class SendRemindersCommandTests(TestCase):
     def test_handle_multiple_users(self, mock_send_email):
         """Should handle multiple users with reminders."""
         from cards.models import UserPreferences as UP
+        current_time = timezone.now().time()
         # Create second user with reminder and due cards
         user2 = User.objects.create_user(
             username='user2', email='user2@example.com', password='pass'
@@ -1924,7 +2041,8 @@ class SendRemindersCommandTests(TestCase):
         ReviewReminder.objects.create(
             user=user2,
             enabled=True,
-            frequency=ReviewReminder.Frequency.DAILY
+            frequency=ReviewReminder.Frequency.DAILY,
+            preferred_time=current_time
         )
 
         out = StringIO()
