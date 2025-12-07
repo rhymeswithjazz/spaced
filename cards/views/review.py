@@ -8,6 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_POST
 
 from ..models import Deck, Card
@@ -17,6 +18,7 @@ from .helpers import get_or_create_preferences
 
 
 @login_required
+@ensure_csrf_cookie
 def review_session(request, deck_pk=None):
     """Start a review session."""
     user = request.user
@@ -96,6 +98,7 @@ def review_session(request, deck_pk=None):
 
 
 @login_required
+@ensure_csrf_cookie
 def review_struggling(request):
     """Start a review session for struggling cards (low ease factor)."""
     user = request.user

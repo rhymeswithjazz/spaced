@@ -194,6 +194,7 @@
     // State
     let currentIndex = 0;
     let showingAnswer = false;
+    let isSubmitting = false;
     let stats = { reviewed: 0, correct: 0, again: 0 };
     let currentTextSize = localStorage.getItem('cardTextSize') || defaultTextSize;
 
@@ -315,6 +316,10 @@
     }
 
     async function submitRating(quality) {
+        // Prevent double-submission
+        if (isSubmitting) return;
+        isSubmitting = true;
+
         const card = cards[currentIndex];
 
         try {
@@ -327,7 +332,10 @@
                 body: JSON.stringify({ quality })
             });
 
-            if (!response.ok) throw new Error('Review failed');
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Server error ${response.status}: ${errorText}`);
+            }
 
             // Update stats
             stats.reviewed++;
@@ -348,6 +356,8 @@
         } catch (error) {
             console.error('Error submitting review:', error);
             showToast('error', 'Failed to submit review. Please try again.');
+        } finally {
+            isSubmitting = false;
         }
     }
 
