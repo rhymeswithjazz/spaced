@@ -103,10 +103,11 @@ class Command(BaseCommand):
         average_rating = avg_rating_data['avg']
         average_rating_percentage = int((average_rating / 5) * 100) if average_rating else 0
 
-        # Cards due
+        # Cards due (excludes new cards that have never been reviewed)
         cards_due = Card.objects.filter(
             deck__owner=user,
-            next_review__lte=timezone.now()
+            next_review__lte=timezone.now(),
+            repetitions__gt=0
         ).count()
 
         # Per-deck breakdown

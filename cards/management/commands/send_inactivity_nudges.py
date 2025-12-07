@@ -80,10 +80,11 @@ class Command(BaseCommand):
             # Calculate days inactive
             days_inactive = (now.date() - prefs.last_study_date).days
 
-            # Get cards due
+            # Get cards due (excludes new cards that have never been reviewed)
             cards_due = Card.objects.filter(
                 deck__owner=user,
-                next_review__lte=now
+                next_review__lte=now,
+                repetitions__gt=0
             ).count()
 
             if dry_run:
