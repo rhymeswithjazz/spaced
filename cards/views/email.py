@@ -222,7 +222,7 @@ def preview_email(request, email_type):
             'context': {
                 'achievement_title': '7-Day Streak',
                 'achievement_description': "A full week of consistent study! You're building great habits.",
-                'achievement_emoji': '&#128293;',
+                'achievement_emoji': '🔥',
                 'achievement_stat': 7,
                 'achievement_stat_label': 'day streak',
                 'review_url': f'{base_url}/review/',

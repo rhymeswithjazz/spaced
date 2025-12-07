@@ -12,49 +12,49 @@ ACHIEVEMENTS = {
     'first_review': {
         'title': 'First Step',
         'description': 'You reviewed your first flashcard! This is the beginning of your learning journey.',
-        'emoji': '&#127775;',  # Star
+        'emoji': '🌟',
         'stat_label': 'cards reviewed',
         'threshold': 1,
     },
     'reviews_100': {
         'title': '100 Cards Reviewed',
         'description': 'You\'ve reviewed 100 cards! Your dedication to learning is impressive.',
-        'emoji': '&#127942;',  # Trophy
+        'emoji': '🏆',
         'stat_label': 'cards reviewed',
         'threshold': 100,
     },
     'reviews_500': {
         'title': '500 Cards Reviewed',
         'description': 'Half a thousand cards reviewed! You\'re becoming a learning machine.',
-        'emoji': '&#128170;',  # Flexed biceps
+        'emoji': '💪',
         'stat_label': 'cards reviewed',
         'threshold': 500,
     },
     'reviews_1000': {
         'title': '1,000 Cards Reviewed',
         'description': 'One thousand cards! You\'re a true knowledge seeker.',
-        'emoji': '&#128293;',  # Fire
+        'emoji': '🔥',
         'stat_label': 'cards reviewed',
         'threshold': 1000,
     },
     'streak_7': {
         'title': '7-Day Streak',
         'description': 'A full week of consistent study! You\'re building great habits.',
-        'emoji': '&#128293;',  # Fire
+        'emoji': '🔥',
         'stat_label': 'day streak',
         'threshold': 7,
     },
     'streak_30': {
         'title': '30-Day Streak',
         'description': 'A month of daily learning! Your consistency is remarkable.',
-        'emoji': '&#127775;',  # Star
+        'emoji': '🌟',
         'stat_label': 'day streak',
         'threshold': 30,
     },
     'streak_100': {
         'title': '100-Day Streak',
         'description': '100 days of unbroken learning! You\'re an inspiration.',
-        'emoji': '&#127942;',  # Trophy
+        'emoji': '🏆',
         'stat_label': 'day streak',
         'threshold': 100,
     },

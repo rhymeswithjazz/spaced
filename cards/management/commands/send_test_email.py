@@ -122,7 +122,7 @@ class Command(BaseCommand):
             return {
                 'achievement_title': '7-Day Streak',
                 'achievement_description': "A full week of consistent study! You're building great habits.",
-                'achievement_emoji': '&#128293;',  # Fire emoji
+                'achievement_emoji': '🔥',
                 'achievement_stat': 7,
                 'achievement_stat_label': 'day streak',
                 'review_url': f'{base_url}/review/',
