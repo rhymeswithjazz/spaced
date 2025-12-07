@@ -2,8 +2,8 @@
 set -e
 
 echo "Setting up directories..."
-mkdir -p /app/logs /app/data
-chmod 777 /app/logs /app/data
+mkdir -p /app/logs /app/data 2>/dev/null || true
+chmod 777 /app/logs /app/data 2>/dev/null || true
 
 echo "Running database migrations..."
 uv run python manage.py migrate --noinput
