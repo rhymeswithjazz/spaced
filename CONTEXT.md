@@ -275,6 +275,17 @@ No external cron setup required - scheduler runs inside the container via superv
 
 ## Recent Major Changes
 
+### 2025-12-07 - Achievement Email Deduplication Fix & Dashboard Stats
+- **What**: Fixed race condition causing duplicate achievement emails; added total reviews to statistics
+- **Why**: Users received multiple celebration emails for same achievement when reviewing cards quickly
+- **Impact**: Achievement emails now send exactly once per milestone; better visibility into total review count
+- **Changes**:
+  - **Race condition fix in `cards/achievements.py`**:
+    - Previous: Check if email sent → Send email → Log to EmailLog (race window between check and log)
+    - Fixed: Use `get_or_create` to atomically claim achievement before sending email
+    - EmailLog entry created first, then email sent - prevents concurrent requests from both sending
+  - **Dashboard Activity tab**: Added "All Time" total reviews count alongside Today/Week/Month stats
+
 ### 2025-12-07 - Needs Work Review Mode & Card Management Improvements
 - **What**: Added dedicated review mode for cards needing work; improved card visibility and sorting
 - **Why**: Help users focus practice on difficult cards; provide better insight into card health
