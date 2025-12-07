@@ -1,8 +1,9 @@
 #!/bin/sh
 set -e
 
-echo "Creating logs directory..."
-mkdir -p /app/logs
+echo "Setting up directories..."
+mkdir -p /app/logs /app/data
+chmod 777 /app/logs /app/data
 
 echo "Running database migrations..."
 uv run python manage.py migrate --noinput

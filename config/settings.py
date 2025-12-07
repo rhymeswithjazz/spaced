@@ -131,8 +131,48 @@ SITE_URL = env('SITE_URL', default='http://localhost:8000')
 LOG_LEVEL = env('LOG_LEVEL', default='INFO')
 LOG_DIR = BASE_DIR / 'logs'
 
-# Ensure logs directory exists
+# Ensure logs directory exists and is writable
 LOG_DIR.mkdir(exist_ok=True)
+
+# Check if we can write to the logs directory
+def _can_write_to_logs():
+    try:
+        test_file = LOG_DIR / '.write_test'
+        test_file.touch()
+        test_file.unlink()
+        return True
+    except (PermissionError, OSError):
+        return False
+
+_FILE_LOGGING_ENABLED = _can_write_to_logs()
+
+# Build handlers based on whether file logging is available
+_handlers = {
+    'console': {
+        'class': 'logging.StreamHandler',
+        'formatter': 'verbose',
+    },
+}
+
+if _FILE_LOGGING_ENABLED:
+    _handlers['file'] = {
+        'class': 'logging.handlers.RotatingFileHandler',
+        'filename': LOG_DIR / 'flashcard.log',
+        'maxBytes': 5 * 1024 * 1024,  # 5 MB
+        'backupCount': 5,
+        'formatter': 'verbose',
+    }
+    _handlers['email_file'] = {
+        'class': 'logging.handlers.RotatingFileHandler',
+        'filename': LOG_DIR / 'email.log',
+        'maxBytes': 5 * 1024 * 1024,  # 5 MB
+        'backupCount': 5,
+        'formatter': 'verbose',
+    }
+
+# Use file handlers if available, otherwise console only
+_default_handlers = ['console', 'file'] if _FILE_LOGGING_ENABLED else ['console']
+_email_handlers = ['console', 'email_file'] if _FILE_LOGGING_ENABLED else ['console']
 
 LOGGING = {
     'version': 1,
@@ -148,50 +188,31 @@ LOGGING = {
             'style': '{',
         },
     },
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-            'formatter': 'verbose',
-        },
-        'file': {
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': LOG_DIR / 'flashcard.log',
-            'maxBytes': 5 * 1024 * 1024,  # 5 MB
-            'backupCount': 5,
-            'formatter': 'verbose',
-        },
-        'email_file': {
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': LOG_DIR / 'email.log',
-            'maxBytes': 5 * 1024 * 1024,  # 5 MB
-            'backupCount': 5,
-            'formatter': 'verbose',
-        },
-    },
+    'handlers': _handlers,
     'loggers': {
         'django': {
-            'handlers': ['console', 'file'],
+            'handlers': _default_handlers,
             'level': 'WARNING',
             'propagate': False,
         },
         'cards': {
-            'handlers': ['console', 'file'],
+            'handlers': _default_handlers,
             'level': LOG_LEVEL,
             'propagate': False,
         },
         'cards.email': {
-            'handlers': ['console', 'email_file'],
+            'handlers': _email_handlers,
             'level': LOG_LEVEL,
             'propagate': False,
         },
         'cards.management.commands': {
-            'handlers': ['console', 'email_file'],
+            'handlers': _email_handlers,
             'level': LOG_LEVEL,
             'propagate': False,
         },
     },
     'root': {
-        'handlers': ['console', 'file'],
+        'handlers': ['console'],
         'level': 'WARNING',
     },
 }
