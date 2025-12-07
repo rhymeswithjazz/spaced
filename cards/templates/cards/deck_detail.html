@@ -103,10 +103,15 @@
                             </span>
                             <span>Next: {{ card.next_review|date:"M j, Y" }}</span>
                             <span>Interval: {{ card.interval }} day{{ card.interval|pluralize }}</span>
+                            {% if card.has_been_reviewed %}
+                            <span class="font-medium {% if card.ease_factor >= 2.5 %}text-green-600 dark:text-green-400{% elif card.ease_factor >= 2.0 %}text-yellow-600 dark:text-yellow-400{% else %}text-red-600 dark:text-red-400{% endif %}">
+                                Ease: {{ card.ease_factor|floatformat:2 }}
+                            </span>
+                            {% endif %}
                         </div>
                     </div>
                     <div class="flex items-center space-x-2">
-                        {% if card.repetitions == 0 %}
+                        {% if not card.has_been_reviewed %}
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
                             New
                         </span>
