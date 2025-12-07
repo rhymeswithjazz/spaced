@@ -55,7 +55,7 @@ The app implements the SM-2 algorithm (`cards/srs.py`):
 
 ```
 Deck (name, description, owner)
-  └── Card (front, back, card_type, SRS fields)
+  └── Card (front, back, card_type, SRS fields, has_been_reviewed)
        └── ReviewLog (quality, timestamps, before/after states)
 
 User
@@ -149,10 +149,10 @@ flashcard/
   - Forecast tab: 7-day calendar of upcoming reviews
   - By Deck tab: Per-deck statistics table
 - **Decks**: List, create, edit, delete, import decks
-- **Deck Detail**: View cards, due count, export deck, reset deck, quick actions
+- **Deck Detail**: View cards with color-coded ease factors, sorting options, export/reset deck
 - **Card CRUD**: Add/edit/delete cards with type selection and cloze validation
 - **Review Session**: Interactive card review with keyboard shortcuts, shuffled order
-  - Struggling cards review mode accessible from dashboard Progress tab
+  - Needs Work review mode for cards with low ease factor (< 2.0)
 - **Settings**: Theme, cards per session, email reminder preferences
 - **Export/Import**: JSON format for deck sharing and backup
 
@@ -275,18 +275,23 @@ No external cron setup required - scheduler runs inside the container via superv
 
 ## Recent Major Changes
 
-### 2025-12-07 - Struggling Cards Review Mode & Dashboard Buttons
-- **What**: Added dedicated review mode for struggling cards; moved review actions to dashboard
-- **Why**: Help users focus practice on difficult cards; simplify navigation
-- **Impact**: Users can now start reviews from dashboard with clear button states
+### 2025-12-07 - Needs Work Review Mode & Card Management Improvements
+- **What**: Added dedicated review mode for cards needing work; improved card visibility and sorting
+- **Why**: Help users focus practice on difficult cards; provide better insight into card health
+- **Impact**: Users can easily identify and practice struggling cards
 - **Changes**:
-  - **New URL route**: `/review/struggling/` for struggling cards review session
-  - **New view**: `review_struggling` fetches cards with ease_factor < 2.0 and repetitions > 0
-  - **Dashboard buttons**: Review and Struggling buttons in header with disabled states
-  - **Removed nav link**: "Review" link removed from header navigation (both desktop and mobile)
-  - **Session completion**: Custom message for struggling card sessions
-  - **7 new tests**: Full coverage of struggling cards review feature
-- **Usage**: Dashboard → Click "Review" or "Struggling" button at top of page
+  - **`has_been_reviewed` field**: New boolean field on Card model tracks if card was ever reviewed
+    - Fixes bug where failed cards (repetitions reset to 0) showed as "new"
+    - Migration sets `has_been_reviewed=True` for cards with existing review logs
+  - **Needs Work review mode**: `/review/struggling/` fetches cards with ease_factor < 2.0
+  - **Dashboard buttons**: Review (blue) and Needs Work (yellow) buttons with disabled states
+  - **Removed nav link**: "Review" link removed from header navigation
+  - **Deck detail improvements**:
+    - Color-coded ease factor display (green ≥2.5, yellow 2.0-2.49, red <2.0)
+    - Sort dropdown: Date Added, Ease (Low/High), Next Review, Interval
+  - **UI styling**: Consistent select styling documented in CLAUDE.md
+- **Usage**: Dashboard → Click "Review" or "Needs Work" button; Deck detail → Sort by ease factor
+- **Migration Required**: `python manage.py migrate` for `has_been_reviewed` field
 
 ### 2025-12-07 - Due Card Count Fixes & New Card Badge
 - **What**: Fixed remaining places where new cards were incorrectly counted as due; added visual distinction for new cards
