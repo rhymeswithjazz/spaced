@@ -1254,8 +1254,8 @@ class StrugglingCardsReviewTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertIn('/login/', response.url)
 
-    def test_dashboard_struggling_cards_link(self):
-        """Dashboard should show clickable link when struggling cards exist."""
+    def test_dashboard_struggling_button_enabled(self):
+        """Dashboard should show enabled Struggling button when struggling cards exist."""
         Card.objects.create(
             deck=self.deck,
             front='Struggling',
@@ -1267,9 +1267,10 @@ class StrugglingCardsReviewTests(TestCase):
         response = self.client.get(reverse('dashboard'))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'href="/review/struggling/"')
+        self.assertContains(response, 'Needs Work (1)')
 
-    def test_dashboard_no_link_when_no_struggling_cards(self):
-        """Dashboard should not show link when no struggling cards."""
+    def test_dashboard_struggling_button_disabled(self):
+        """Dashboard should show disabled Struggling button when no struggling cards."""
         Card.objects.create(
             deck=self.deck,
             front='Normal',
@@ -1281,6 +1282,7 @@ class StrugglingCardsReviewTests(TestCase):
         response = self.client.get(reverse('dashboard'))
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, 'href="/review/struggling/"')
+        self.assertContains(response, 'cursor-not-allowed')  # Disabled button style
 
 
 class SettingsViewTests(TestCase):

@@ -5,20 +5,48 @@
 {% block content %}
 <div class="space-y-8">
     <!-- Header -->
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
             <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Welcome back, {{ user.username }}!</p>
         </div>
-        {% if total_due > 0 or total_new > 0 %}
-        <a href="{% url 'review_session' %}" class="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
-            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-            Start Review{% if total_due > 0 %} ({{ total_due }} due){% endif %}
-        </a>
-        {% endif %}
+        <div class="flex flex-col sm:flex-row gap-3">
+            <!-- Review Button -->
+            {% if total_due > 0 or total_new > 0 %}
+            <a href="{% url 'review_session' %}" class="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                Review{% if total_due > 0 %} ({{ total_due }} due){% elif total_new > 0 %} ({{ total_new }} new){% endif %}
+            </a>
+            {% else %}
+            <span class="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-gray-400 dark:text-gray-500 bg-gray-200 dark:bg-gray-700 cursor-not-allowed">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                Review
+            </span>
+            {% endif %}
+
+            <!-- Needs Work Button -->
+            {% if struggling_cards > 0 %}
+            <a href="{% url 'review_struggling' %}" class="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                </svg>
+                Needs Work ({{ struggling_cards }})
+            </a>
+            {% else %}
+            <span class="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-gray-400 dark:text-gray-500 bg-gray-200 dark:bg-gray-700 cursor-not-allowed">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                </svg>
+                Needs Work
+            </span>
+            {% endif %}
+        </div>
     </div>
 
     <!-- Stats -->
@@ -239,12 +267,8 @@
                                     <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ avg_ease }}</span>
                                 </div>
                                 <div class="flex items-center justify-between">
-                                    <span class="text-sm text-gray-700 dark:text-gray-300">Struggling Cards</span>
-                                    {% if struggling_cards > 0 %}
-                                    <a href="{% url 'review_struggling' %}" class="text-sm font-semibold text-red-600 dark:text-red-400 hover:underline" title="Review struggling cards">{{ struggling_cards }}</a>
-                                    {% else %}
-                                    <span class="text-sm font-semibold text-green-600 dark:text-green-400">{{ struggling_cards }}</span>
-                                    {% endif %}
+                                    <span class="text-sm text-gray-700 dark:text-gray-300">Cards Needing Work</span>
+                                    <span class="text-sm font-semibold {% if struggling_cards > 0 %}text-red-600 dark:text-red-400{% else %}text-green-600 dark:text-green-400{% endif %}">{{ struggling_cards }}</span>
                                 </div>
                             </div>
                         </div>

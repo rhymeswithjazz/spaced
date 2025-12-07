@@ -139,9 +139,6 @@
                         <a href="{% url 'deck_list' %}" class="px-3 py-2 rounded-md text-sm font-medium {% if 'deck' in request.resolver_match.url_name %}bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300{% else %}text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700{% endif %}">
                             Decks
                         </a>
-                        <a href="{% url 'review_session' %}" class="px-3 py-2 rounded-md text-sm font-medium {% if request.resolver_match.url_name == 'review_session' %}bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300{% else %}text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700{% endif %}">
-                            Review
-                        </a>
                     </div>
                 </div>
                 <div class="flex items-center space-x-4">
@@ -193,7 +190,6 @@
             <div class="px-2 pt-2 pb-3 space-y-1">
                 <a href="{% url 'dashboard' %}" class="block px-3 py-2 rounded-md text-base font-medium {% if request.resolver_match.url_name == 'dashboard' %}bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300{% else %}text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700{% endif %}">Dashboard</a>
                 <a href="{% url 'deck_list' %}" class="block px-3 py-2 rounded-md text-base font-medium {% if 'deck' in request.resolver_match.url_name %}bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300{% else %}text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700{% endif %}">Decks</a>
-                <a href="{% url 'review_session' %}" class="block px-3 py-2 rounded-md text-base font-medium {% if request.resolver_match.url_name == 'review_session' %}bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300{% else %}text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700{% endif %}">Review</a>
             </div>
             <div class="border-t border-gray-200 dark:border-gray-700 pt-4 pb-3">
                 <div class="px-4 flex items-center justify-between">

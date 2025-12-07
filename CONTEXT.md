@@ -275,17 +275,18 @@ No external cron setup required - scheduler runs inside the container via superv
 
 ## Recent Major Changes
 
-### 2025-12-07 - Struggling Cards Review Mode
-- **What**: Added dedicated review mode for struggling cards (low ease factor)
-- **Why**: Help users focus practice on cards they find difficult
-- **Impact**: Users can now directly review struggling cards from dashboard
+### 2025-12-07 - Struggling Cards Review Mode & Dashboard Buttons
+- **What**: Added dedicated review mode for struggling cards; moved review actions to dashboard
+- **Why**: Help users focus practice on difficult cards; simplify navigation
+- **Impact**: Users can now start reviews from dashboard with clear button states
 - **Changes**:
   - **New URL route**: `/review/struggling/` for struggling cards review session
   - **New view**: `review_struggling` fetches cards with ease_factor < 2.0 and repetitions > 0
-  - **Dashboard link**: "Struggling Cards" count now clickable when > 0 (red text with hover underline)
+  - **Dashboard buttons**: Review and Struggling buttons in header with disabled states
+  - **Removed nav link**: "Review" link removed from header navigation (both desktop and mobile)
   - **Session completion**: Custom message for struggling card sessions
   - **7 new tests**: Full coverage of struggling cards review feature
-- **Usage**: Dashboard → Progress tab → Click on struggling cards count
+- **Usage**: Dashboard → Click "Review" or "Struggling" button at top of page
 
 ### 2025-12-07 - Due Card Count Fixes & New Card Badge
 - **What**: Fixed remaining places where new cards were incorrectly counted as due; added visual distinction for new cards
