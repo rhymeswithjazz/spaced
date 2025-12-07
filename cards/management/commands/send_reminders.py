@@ -54,7 +54,8 @@ class Command(BaseCommand):
         dry_run = options['dry_run']
         time_window = options['time_window']
         now = timezone.now()
-        current_day = now.weekday()  # 0 = Monday
+        local_now = timezone.localtime(now)
+        current_day = local_now.weekday()  # 0 = Monday (use local time for day check)
 
         # Start execution log
         execution_log = None
@@ -264,8 +265,10 @@ class Command(BaseCommand):
         Returns:
             True if current time is within the window, False otherwise
         """
-        # Get current time components
-        current_time = now.time()
+        # Convert to local time (respects Django TIME_ZONE setting)
+        # This is important because preferred_time is stored in the user's local timezone
+        local_now = timezone.localtime(now)
+        current_time = local_now.time()
         preferred = reminder.preferred_time
 
         # Convert times to minutes since midnight for easier comparison

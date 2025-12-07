@@ -1686,8 +1686,9 @@ class SendRemindersCommandTests(TestCase):
             back='Test A',
             next_review=timezone.now() - timedelta(hours=1)
         )
-        # Create reminder for user - set preferred_time to current time for tests
-        current_time = timezone.now().time()
+        # Create reminder for user - set preferred_time to current LOCAL time for tests
+        # Use localtime() since the command compares against local time
+        current_time = timezone.localtime(timezone.now()).time()
         self.reminder = ReviewReminder.objects.create(
             user=self.user,
             enabled=True,
@@ -2026,7 +2027,7 @@ class SendRemindersCommandTests(TestCase):
     def test_handle_multiple_users(self, mock_send_email):
         """Should handle multiple users with reminders."""
         from cards.models import UserPreferences as UP
-        current_time = timezone.now().time()
+        current_time = timezone.localtime(timezone.now()).time()
         # Create second user with reminder and due cards
         user2 = User.objects.create_user(
             username='user2', email='user2@example.com', password='pass'
