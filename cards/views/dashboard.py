@@ -152,6 +152,7 @@ def dashboard(request):
         'reviews_today': reviews_today,
         'reviews_this_week': reviews_this_week,
         'reviews_this_month': reviews_this_month,
+        'total_reviews': total_reviews_ever,
         'avg_reviews_per_day': avg_reviews_per_day,
         'longest_streak': longest_streak,
         # Forecast

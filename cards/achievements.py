@@ -114,29 +114,38 @@ def _award_achievement_if_new(user, achievement_key, stat_value):
     Send achievement email if this achievement hasn't been sent before.
 
     Returns True if achievement was awarded, False if already awarded.
+    Uses get_or_create to prevent race conditions with concurrent requests.
     """
     achievement = ACHIEVEMENTS.get(achievement_key)
     if not achievement:
         return False
 
-    # Check if this achievement email was already sent
-    subject_pattern = achievement['title']
-    already_sent = EmailLog.objects.filter(
+    subject = f"Achievement Unlocked: {achievement['title']}"
+
+    # Atomically check/create log entry BEFORE sending email
+    # This prevents race conditions where multiple requests could pass
+    # the "already sent" check before any email is logged
+    _, created = EmailLog.objects.get_or_create(
         user=user,
         email_type=EmailLog.EmailType.ACHIEVEMENT,
-        subject__contains=subject_pattern,
-    ).exists()
+        subject=subject,
+    )
 
-    if already_sent:
+    if not created:
+        # Already sent (or another request just claimed it)
         return False
 
-    # Send achievement email
+    # We claimed this achievement - now send the email
     _send_achievement_email(user, achievement, stat_value)
     return True
 
 
 def _send_achievement_email(user, achievement, stat_value):
-    """Send an achievement notification email."""
+    """Send an achievement notification email.
+
+    Note: EmailLog entry is created by _award_achievement_if_new before
+    calling this function to prevent race conditions.
+    """
     subject = f"Achievement Unlocked: {achievement['title']}"
 
     # Build review URL
@@ -158,11 +167,4 @@ def _send_achievement_email(user, achievement, stat_value):
         template_name='emails/achievement',
         context=context,
         fail_silently=True,  # Don't fail the review if email fails
-    )
-
-    # Log the email
-    EmailLog.objects.create(
-        user=user,
-        email_type=EmailLog.EmailType.ACHIEVEMENT,
-        subject=subject,
     )
