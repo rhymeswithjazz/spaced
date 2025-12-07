@@ -24,10 +24,17 @@ class StyledFormMixin:
                     "text-primary-600 focus:ring-primary-500"
                 )
             elif isinstance(field.widget, forms.Select):
-                field.widget.attrs['class'] = base_classes
+                # Add extra right padding for the dropdown chevron
+                field.widget.attrs['class'] = base_classes + " pr-10"
             elif isinstance(field.widget, forms.Textarea):
                 field.widget.attrs['class'] = base_classes
                 field.widget.attrs['rows'] = 3
+            elif isinstance(field.widget, forms.TimeInput):
+                # Add dark color-scheme for native time picker icons
+                field.widget.attrs['class'] = base_classes + " dark:[color-scheme:dark]"
+            elif isinstance(field.widget, forms.DateInput):
+                # Add dark color-scheme for native date picker icons
+                field.widget.attrs['class'] = base_classes + " dark:[color-scheme:dark]"
             else:
                 field.widget.attrs['class'] = base_classes
 
