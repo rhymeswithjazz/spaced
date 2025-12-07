@@ -417,6 +417,13 @@ No external cron setup required - scheduler runs inside the container via superv
 - **Why**: Create foundation for spaced repetition flashcard app
 - **Impact**: Basic models and infrastructure ready for UI development
 
+## TODO - Features
+
+- [ ] **Review Struggling Cards** - Add a dedicated review mode for struggling cards
+  - Cards with low ease factor or frequent failures
+  - Accessible from dashboard "Struggling cards" stat
+  - Could include cards that were rated 0-2 multiple times
+
 ## TODO - Test Coverage Improvements
 
 The following areas have lower test coverage and should be addressed:
