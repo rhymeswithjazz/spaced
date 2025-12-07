@@ -122,18 +122,23 @@ def _award_achievement_if_new(user, achievement_key, stat_value):
 
     subject = f"Achievement Unlocked: {achievement['title']}"
 
-    # Atomically check/create log entry BEFORE sending email
-    # This prevents race conditions where multiple requests could pass
-    # the "already sent" check before any email is logged
-    _, created = EmailLog.objects.get_or_create(
+    # Check if already sent - handle case where duplicates exist
+    existing = EmailLog.objects.filter(
+        user=user,
+        email_type=EmailLog.EmailType.ACHIEVEMENT,
+        subject=subject,
+    ).first()
+
+    if existing:
+        # Already sent
+        return False
+
+    # Create log entry BEFORE sending email to prevent race conditions
+    EmailLog.objects.create(
         user=user,
         email_type=EmailLog.EmailType.ACHIEVEMENT,
         subject=subject,
     )
-
-    if not created:
-        # Already sent (or another request just claimed it)
-        return False
 
     # We claimed this achievement - now send the email
     _send_achievement_email(user, achievement, stat_value)
