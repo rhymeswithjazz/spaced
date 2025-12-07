@@ -109,7 +109,7 @@ flashcard/
 │   ├── achievements.py      # Achievement checking and notifications
 │   ├── admin.py             # Admin interface
 │   ├── context_processors.py # User theme context
-│   ├── tests.py             # Unit tests (183 tests)
+│   ├── tests.py             # Unit tests (184 tests)
 │   ├── templates/cards/     # App templates
 │   │   └── email/           # Email preference pages
 │   └── management/commands/
@@ -273,6 +273,17 @@ The Docker container includes **supercronic** which automatically runs email com
 No external cron setup required - scheduler runs inside the container via supervisor.
 
 ## Recent Major Changes
+
+### 2025-12-07 - Due Card Count Fixes & New Card Badge
+- **What**: Fixed remaining places where new cards were incorrectly counted as due; added visual distinction for new cards
+- **Why**: Email commands and Card.is_due() method were still including new cards in due counts
+- **Impact**: Consistent due card counts across all features; clear visual distinction between new and due cards
+- **Changes**:
+  - **send_inactivity_nudges**: Added `repetitions__gt=0` filter to due card count
+  - **send_weekly_stats**: Added `repetitions__gt=0` filter to due card count
+  - **Card.is_due() method**: Now returns False for new cards (repetitions=0)
+  - **Deck detail page**: Added blue "New" badge for unreviewed cards, yellow "Due" badge for cards needing review
+  - **New test**: `test_new_card_is_not_due` verifies new cards aren't marked as due
 
 ### 2025-12-07 - Docker Internal Scheduler & Comprehensive Logging
 - **What**: Added supercronic scheduler and comprehensive logging to catch email issues
