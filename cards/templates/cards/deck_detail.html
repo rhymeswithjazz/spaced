@@ -83,8 +83,18 @@
     <!-- Cards List -->
     {% if cards %}
     <div class="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-lg">
-        <div class="px-4 py-5 sm:px-6 border-b border-gray-200 dark:border-gray-700">
+        <div class="px-4 py-5 sm:px-6 border-b border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <h3 class="text-lg font-medium text-gray-900 dark:text-white">Cards</h3>
+            <div class="flex items-center gap-2">
+                <span class="text-sm text-gray-500 dark:text-gray-400">Sort:</span>
+                <select onchange="window.location.href='?sort=' + this.value" class="text-sm rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-primary-500 focus:ring-primary-500">
+                    <option value="created" {% if current_sort == 'created' %}selected{% endif %}>Date Added</option>
+                    <option value="ease_asc" {% if current_sort == 'ease_asc' %}selected{% endif %}>Ease (Low → High)</option>
+                    <option value="ease_desc" {% if current_sort == 'ease_desc' %}selected{% endif %}>Ease (High → Low)</option>
+                    <option value="next_review" {% if current_sort == 'next_review' %}selected{% endif %}>Next Review</option>
+                    <option value="interval" {% if current_sort == 'interval' %}selected{% endif %}>Interval (Longest)</option>
+                </select>
+            </div>
         </div>
         <ul class="divide-y divide-gray-200 dark:divide-gray-700">
             {% for card in cards %}

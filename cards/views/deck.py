@@ -84,10 +84,23 @@ def deck_detail(request, pk):
     now = timezone.now()
     due_count = cards.filter(next_review__lte=now, has_been_reviewed=True).count()
 
+    # Handle sorting
+    sort = request.GET.get('sort', 'created')
+    sort_options = {
+        'created': 'pk',
+        'ease_asc': 'ease_factor',
+        'ease_desc': '-ease_factor',
+        'next_review': 'next_review',
+        'interval': '-interval',
+    }
+    order_by = sort_options.get(sort, 'pk')
+    cards = cards.order_by(order_by)
+
     context = {
         'deck': deck,
         'cards': cards,
         'due_count': due_count,
+        'current_sort': sort,
     }
     return render(request, 'cards/deck_detail.html', context)
 
