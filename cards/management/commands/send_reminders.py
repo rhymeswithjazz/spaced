@@ -285,10 +285,11 @@ class Command(BaseCommand):
         return diff <= time_window_minutes
 
     def _get_due_cards_count(self, user):
-        """Count cards due for review for a user."""
+        """Count cards due for review for a user (excludes new cards)."""
         return Card.objects.filter(
             deck__owner=user,
-            next_review__lte=timezone.now()
+            next_review__lte=timezone.now(),
+            repetitions__gt=0  # Exclude new cards (never reviewed)
         ).count()
 
     def _send_reminder_email(self, user, due_count):

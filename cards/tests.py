@@ -1679,12 +1679,13 @@ class SendRemindersCommandTests(TestCase):
             password='testpass123'
         )
         self.deck = Deck.objects.create(name='Test Deck', owner=self.user)
-        # Create a due card
+        # Create a due card (must have repetitions > 0 to be considered "due" not "new")
         self.card = Card.objects.create(
             deck=self.deck,
             front='Test Q',
             back='Test A',
-            next_review=timezone.now() - timedelta(hours=1)
+            next_review=timezone.now() - timedelta(hours=1),
+            repetitions=1
         )
         # Create reminder for user - set preferred_time to current LOCAL time for tests
         # Use localtime() since the command compares against local time
@@ -1869,7 +1870,8 @@ class SendRemindersCommandTests(TestCase):
         Card.objects.create(
             deck=self.deck,
             front='Q2',
-            next_review=timezone.now() - timedelta(hours=2)
+            next_review=timezone.now() - timedelta(hours=2),
+            repetitions=1
         )
         self.assertEqual(cmd._get_due_cards_count(self.user), 2)
 
@@ -1877,7 +1879,8 @@ class SendRemindersCommandTests(TestCase):
         Card.objects.create(
             deck=self.deck,
             front='Q3',
-            next_review=timezone.now() + timedelta(days=1)
+            next_review=timezone.now() + timedelta(days=1),
+            repetitions=1
         )
         self.assertEqual(cmd._get_due_cards_count(self.user), 2)
 
@@ -1893,7 +1896,8 @@ class SendRemindersCommandTests(TestCase):
         Card.objects.create(
             deck=other_deck,
             front='Other Q',
-            next_review=timezone.now() - timedelta(hours=1)
+            next_review=timezone.now() - timedelta(hours=1),
+            repetitions=1
         )
 
         # Should still only see 1 card for original user
@@ -2037,7 +2041,8 @@ class SendRemindersCommandTests(TestCase):
         Card.objects.create(
             deck=deck2,
             front='Q2',
-            next_review=timezone.now() - timedelta(hours=1)
+            next_review=timezone.now() - timedelta(hours=1),
+            repetitions=1
         )
         ReviewReminder.objects.create(
             user=user2,
