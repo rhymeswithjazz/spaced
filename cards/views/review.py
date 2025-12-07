@@ -96,6 +96,65 @@ def review_session(request, deck_pk=None):
 
 
 @login_required
+def review_struggling(request):
+    """Start a review session for struggling cards (low ease factor)."""
+    user = request.user
+    preferences = get_or_create_preferences(user)
+
+    # Struggling cards: low ease factor and have been reviewed at least once
+    struggling_cards = list(Card.objects.filter(
+        deck__owner=user,
+        ease_factor__lt=2.0,
+        repetitions__gt=0
+    ).select_related('deck')[:preferences.cards_per_session])
+
+    if not struggling_cards:
+        messages.info(request, 'No struggling cards to review!')
+        return redirect('dashboard')
+
+    # Serialize cards for JavaScript
+    # For cloze cards, expand into multiple items (one per cloze number)
+    cards_data = []
+    for card in struggling_cards:
+        if card.card_type == Card.CardType.CLOZE:
+            # Get unique cloze numbers and create an item for each
+            cloze_numbers = cloze.get_cloze_numbers(card.front)
+            for num in sorted(cloze_numbers):
+                cards_data.append({
+                    'id': card.pk,
+                    'front': card.front,
+                    'back': card.back,
+                    'notes': card.notes,
+                    'card_type': card.card_type,
+                    'active_cloze': num,
+                })
+        else:
+            cards_data.append({
+                'id': card.pk,
+                'front': card.front,
+                'back': card.back,
+                'notes': card.notes,
+                'card_type': card.card_type,
+                'active_cloze': None,
+            })
+
+    # Shuffle cards for variety
+    random.shuffle(cards_data)
+
+    cards_json = json.dumps(cards_data)
+
+    context = {
+        'cards': struggling_cards,
+        'cards_json': cards_json,
+        'deck': None,
+        'total_due': len(cards_data),
+        'text_size': preferences.card_text_size,
+        'session_type': 'struggling',
+    }
+    return render(request, 'cards/review_session.html', context)
+
+
+@login_required
 @require_POST
 def review_card(request, pk):
     """Submit a review for a card."""

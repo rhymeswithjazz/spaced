@@ -32,6 +32,7 @@ urlpatterns = [
     # Review
     path('review/', views.review_session, name='review_session'),
     path('review/deck/<int:deck_pk>/', views.review_session, name='review_deck'),
+    path('review/struggling/', views.review_struggling, name='review_struggling'),
     path('api/review/<int:pk>/', views.review_card, name='review_card'),
 
     # Settings

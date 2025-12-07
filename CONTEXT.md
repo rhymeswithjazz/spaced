@@ -109,7 +109,7 @@ flashcard/
 │   ├── achievements.py      # Achievement checking and notifications
 │   ├── admin.py             # Admin interface
 │   ├── context_processors.py # User theme context
-│   ├── tests.py             # Unit tests (184 tests)
+│   ├── tests.py             # Unit tests (191 tests)
 │   ├── templates/cards/     # App templates
 │   │   └── email/           # Email preference pages
 │   └── management/commands/
@@ -152,6 +152,7 @@ flashcard/
 - **Deck Detail**: View cards, due count, export deck, reset deck, quick actions
 - **Card CRUD**: Add/edit/delete cards with type selection and cloze validation
 - **Review Session**: Interactive card review with keyboard shortcuts, shuffled order
+  - Struggling cards review mode accessible from dashboard Progress tab
 - **Settings**: Theme, cards per session, email reminder preferences
 - **Export/Import**: JSON format for deck sharing and backup
 
@@ -273,6 +274,18 @@ The Docker container includes **supercronic** which automatically runs email com
 No external cron setup required - scheduler runs inside the container via supervisor.
 
 ## Recent Major Changes
+
+### 2025-12-07 - Struggling Cards Review Mode
+- **What**: Added dedicated review mode for struggling cards (low ease factor)
+- **Why**: Help users focus practice on cards they find difficult
+- **Impact**: Users can now directly review struggling cards from dashboard
+- **Changes**:
+  - **New URL route**: `/review/struggling/` for struggling cards review session
+  - **New view**: `review_struggling` fetches cards with ease_factor < 2.0 and repetitions > 0
+  - **Dashboard link**: "Struggling Cards" count now clickable when > 0 (red text with hover underline)
+  - **Session completion**: Custom message for struggling card sessions
+  - **7 new tests**: Full coverage of struggling cards review feature
+- **Usage**: Dashboard → Progress tab → Click on struggling cards count
 
 ### 2025-12-07 - Due Card Count Fixes & New Card Badge
 - **What**: Fixed remaining places where new cards were incorrectly counted as due; added visual distinction for new cards
@@ -416,13 +429,6 @@ No external cron setup required - scheduler runs inside the container via superv
 - **What**: Project initialization with Django, Docker, and SM-2 algorithm
 - **Why**: Create foundation for spaced repetition flashcard app
 - **Impact**: Basic models and infrastructure ready for UI development
-
-## TODO - Features
-
-- [ ] **Review Struggling Cards** - Add a dedicated review mode for struggling cards
-  - Cards with low ease factor or frequent failures
-  - Accessible from dashboard "Struggling cards" stat
-  - Could include cards that were rated 0-2 multiple times
 
 ## TODO - Test Coverage Improvements
 

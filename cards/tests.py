@@ -1167,6 +1167,122 @@ class ReviewViewTests(TestCase):
         self.assertEqual(response.status_code, 400)
 
 
+class StrugglingCardsReviewTests(TestCase):
+    """Tests for struggling cards review feature."""
+
+    def setUp(self):
+        self.client = Client()
+        self.user = User.objects.create_user(
+            username='testuser', password='testpass123'
+        )
+        from .models import UserPreferences
+        UserPreferences.objects.create(user=self.user)
+        self.deck = Deck.objects.create(name='Test Deck', owner=self.user)
+        self.client.login(username='testuser', password='testpass123')
+
+    def test_struggling_review_redirects_when_no_struggling_cards(self):
+        """Should redirect to dashboard when no struggling cards exist."""
+        # Create a card with normal ease factor
+        Card.objects.create(
+            deck=self.deck,
+            front='Normal Card',
+            back='Answer',
+            ease_factor=2.5,
+            repetitions=1
+        )
+
+        response = self.client.get(reverse('review_struggling'))
+        self.assertRedirects(response, reverse('dashboard'))
+
+    def test_struggling_review_loads_with_struggling_cards(self):
+        """Should load review session with struggling cards."""
+        # Create a struggling card (low ease factor, has been reviewed)
+        Card.objects.create(
+            deck=self.deck,
+            front='Struggling Card',
+            back='Answer',
+            ease_factor=1.5,
+            repetitions=2
+        )
+
+        response = self.client.get(reverse('review_struggling'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Struggling Card')
+        self.assertEqual(response.context['session_type'], 'struggling')
+
+    def test_struggling_review_excludes_new_cards(self):
+        """Should not include cards that have never been reviewed."""
+        # Create a new card with low ease factor (shouldn't be possible normally)
+        Card.objects.create(
+            deck=self.deck,
+            front='New Card',
+            back='Answer',
+            ease_factor=1.5,
+            repetitions=0  # Never reviewed
+        )
+
+        response = self.client.get(reverse('review_struggling'))
+        self.assertRedirects(response, reverse('dashboard'))
+
+    def test_struggling_review_only_includes_low_ease_cards(self):
+        """Should only include cards with ease factor < 2.0."""
+        # Create cards with different ease factors
+        struggling = Card.objects.create(
+            deck=self.deck,
+            front='Struggling',
+            back='Answer',
+            ease_factor=1.8,
+            repetitions=1
+        )
+        normal = Card.objects.create(
+            deck=self.deck,
+            front='Normal',
+            back='Answer',
+            ease_factor=2.5,
+            repetitions=1
+        )
+
+        response = self.client.get(reverse('review_struggling'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Struggling')
+        self.assertNotContains(response, 'Normal')
+
+    def test_struggling_review_requires_login(self):
+        """Should require login to access."""
+        self.client.logout()
+        response = self.client.get(reverse('review_struggling'))
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('/login/', response.url)
+
+    def test_dashboard_struggling_cards_link(self):
+        """Dashboard should show clickable link when struggling cards exist."""
+        Card.objects.create(
+            deck=self.deck,
+            front='Struggling',
+            back='Answer',
+            ease_factor=1.5,
+            repetitions=1
+        )
+
+        response = self.client.get(reverse('dashboard'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'href="/review/struggling/"')
+
+    def test_dashboard_no_link_when_no_struggling_cards(self):
+        """Dashboard should not show link when no struggling cards."""
+        Card.objects.create(
+            deck=self.deck,
+            front='Normal',
+            back='Answer',
+            ease_factor=2.5,
+            repetitions=1
+        )
+
+        response = self.client.get(reverse('dashboard'))
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'href="/review/struggling/"')
+
+
 class SettingsViewTests(TestCase):
     """Tests for settings views."""
 
