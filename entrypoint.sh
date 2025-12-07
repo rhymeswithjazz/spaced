@@ -1,8 +1,11 @@
 #!/bin/sh
 set -e
 
+echo "Creating logs directory..."
+mkdir -p /app/logs
+
 echo "Running database migrations..."
 uv run python manage.py migrate --noinput
 
-echo "Starting gunicorn..."
-exec uv run gunicorn --bind 0.0.0.0:8000 --workers 2 config.wsgi:application
+echo "Starting supervisor (gunicorn + supercronic)..."
+exec /usr/bin/supervisord -c /app/supervisord.conf

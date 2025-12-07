@@ -1,0 +1,19 @@
+# Flashcard App Scheduled Tasks
+# This file is used by supercronic inside the Docker container
+#
+# Format: minute hour day-of-month month day-of-week command
+#
+# Note: supercronic logs all output to stdout/stderr, which Docker captures
+
+# Study reminders - run every 15 minutes to catch users within their preferred time window
+*/15 * * * * cd /app && uv run python manage.py send_reminders
+
+# Streak reminders - check every 2 hours from noon to 10pm
+# These remind users whose streaks are at risk
+0 12,14,16,18,20,22 * * * cd /app && uv run python manage.py send_streak_reminders 2>/dev/null || true
+
+# Weekly stats - Sundays at 9am server time
+0 9 * * 0 cd /app && uv run python manage.py send_weekly_stats 2>/dev/null || true
+
+# Inactivity nudges - daily at 10am for users who haven't studied in 3+ days
+0 10 * * * cd /app && uv run python manage.py send_inactivity_nudges 2>/dev/null || true

@@ -28,11 +28,14 @@ A self-hosted spaced repetition flashcard application built with Django. Designe
 - **Package Manager**: uv
 - **WSGI Server**: Gunicorn
 - **Containerization**: Docker
+- **Process Manager**: Supervisor (manages gunicorn + supercronic)
+- **Scheduler**: Supercronic (lightweight cron for containers)
 
 ### Key Libraries
 - `django-environ` - Environment variable management
 - `gunicorn` - Production WSGI server
 - `pillow` - Image processing for email logo resizing
+- `supervisor` - Process management in container
 
 ## Architecture
 
@@ -60,6 +63,8 @@ User
   ├── ReviewReminder (frequency, preferred_time)
   ├── EmailVerificationToken (token, created_at, expires after 24h)
   └── EmailLog (email_type, subject, sent_at - for deduplication)
+
+CommandExecutionLog (command_name, status, started_at, finished_at, users_processed, emails_sent, errors)
 ```
 
 ### Card Types
@@ -104,7 +109,7 @@ flashcard/
 │   ├── achievements.py      # Achievement checking and notifications
 │   ├── admin.py             # Admin interface
 │   ├── context_processors.py # User theme context
-│   ├── tests.py             # Unit tests (177 tests)
+│   ├── tests.py             # Unit tests (183 tests)
 │   ├── templates/cards/     # App templates
 │   │   └── email/           # Email preference pages
 │   └── management/commands/
@@ -125,6 +130,10 @@ flashcard/
 │       ├── achievement.*    # Milestone celebrations
 │       └── components/      # Reusable email components
 ├── data/                    # SQLite database (Docker volume)
+├── logs/                    # Application logs (Docker volume)
+├── crontab                  # Supercronic schedule for email commands
+├── supervisord.conf         # Process manager config (gunicorn + supercronic)
+├── entrypoint.sh            # Docker entrypoint (migrations + supervisor)
 ├── Dockerfile
 ├── docker-compose.yml
 ├── pyproject.toml
@@ -243,22 +252,45 @@ uv run python manage.py send_test_email <username> study_reminder --theme=dark
 - Add `?theme=dark` for dark mode preview
 - Only available when DEBUG=True
 
-#### Cron Schedule (Recommended)
+#### Automatic Scheduling (Built into Docker)
+
+The Docker container includes **supercronic** which automatically runs email commands on schedule:
+
 ```bash
-# Study reminders - hourly check
-0 * * * * docker compose exec web uv run python manage.py send_reminders
+# Study reminders - every 15 minutes (catches users' preferred times)
+*/15 * * * * uv run python manage.py send_reminders
 
 # Streak reminders - every 2 hours from noon to 10pm
-0 12,14,16,18,20,22 * * * docker compose exec web uv run python manage.py send_streak_reminders
+0 12,14,16,18,20,22 * * * uv run python manage.py send_streak_reminders
 
 # Weekly stats - Sundays at 9am
-0 9 * * 0 docker compose exec web uv run python manage.py send_weekly_stats
+0 9 * * 0 uv run python manage.py send_weekly_stats
 
 # Inactivity nudges - daily at 10am
-0 10 * * * docker compose exec web uv run python manage.py send_inactivity_nudges
+0 10 * * * uv run python manage.py send_inactivity_nudges
 ```
 
+No external cron setup required - scheduler runs inside the container via supervisor.
+
 ## Recent Major Changes
+
+### 2025-12-07 - Docker Internal Scheduler & Comprehensive Logging
+- **What**: Added supercronic scheduler and comprehensive logging to catch email issues
+- **Why**: Reminders weren't being sent because Docker had no internal scheduler; no logs existed to debug issues
+- **Impact**: Emails now run automatically inside Docker; all execution is logged for debugging
+- **Changes**:
+  - **Supercronic**: Lightweight cron replacement runs inside container
+  - **Supervisor**: Manages both gunicorn and supercronic as child processes
+  - **Django Logging**: Configured rotating file logs (5MB max, 5 backups) for general and email-specific logs
+  - **CommandExecutionLog Model**: Tracks all management command runs with status, timing, user counts, and errors
+  - **Enhanced send_reminders**: Full logging at every decision point, error tracking, `--status` flag for diagnostics
+  - **New Environment Variables**: `SITE_URL`, `LOG_LEVEL`
+  - **Log Volume**: Logs persisted via Docker volume for debugging
+- **Diagnostic Command**: `python manage.py send_reminders --status` shows last run info and server time
+- **Log Files**:
+  - `/app/logs/flashcard.log` - General application logs
+  - `/app/logs/email.log` - Email and reminder command logs
+- **Migration**: Run `python manage.py migrate` for CommandExecutionLog model
 
 ### 2025-12-06 - Docker Health Check Fix
 - **What**: Fixed container health check always reporting unhealthy in Portainer
@@ -381,11 +413,7 @@ The following areas have lower test coverage and should be addressed:
   - Test empty review history
 
 ### Low Priority
-- [ ] **Send Reminders Command (cards/management/commands/send_reminders.py)** - 0% coverage
-  - Requires mocking email sending
-  - Test frequency logic (daily, weekly, custom)
-  - Test preferred time matching
-  - Consider if worth the complexity
+- [x] **Send Reminders Command** - Now has comprehensive logging and CommandExecutionLog tracking
 
 ### Running Tests
 ```bash

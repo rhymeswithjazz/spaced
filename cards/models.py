@@ -312,3 +312,73 @@ class EmailLog(models.Model):
             email_type=email_type,
             sent_at__gte=week_ago
         ).exists()
+
+
+class CommandExecutionLog(models.Model):
+    """Log of management command executions for monitoring and debugging."""
+
+    class Status(models.TextChoices):
+        STARTED = 'started', 'Started'
+        SUCCESS = 'success', 'Success'
+        FAILURE = 'failure', 'Failure'
+
+    command_name = models.CharField(max_length=100)
+    status = models.CharField(max_length=20, choices=Status.choices)
+    started_at = models.DateTimeField()
+    finished_at = models.DateTimeField(null=True, blank=True)
+    users_processed = models.IntegerField(default=0)
+    emails_sent = models.IntegerField(default=0)
+    errors_count = models.IntegerField(default=0)
+    error_message = models.TextField(blank=True)
+    details = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        ordering = ['-started_at']
+        indexes = [
+            models.Index(fields=['command_name', 'started_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.command_name} at {self.started_at} ({self.status})"
+
+    @classmethod
+    def start(cls, command_name):
+        """Create a new log entry when command starts."""
+        return cls.objects.create(
+            command_name=command_name,
+            status=cls.Status.STARTED,
+            started_at=timezone.now(),
+        )
+
+    def finish_success(self, users_processed=0, emails_sent=0, details=None):
+        """Mark command as successfully completed."""
+        self.status = self.Status.SUCCESS
+        self.finished_at = timezone.now()
+        self.users_processed = users_processed
+        self.emails_sent = emails_sent
+        if details:
+            self.details = details
+        self.save()
+
+    def finish_failure(self, error_message, errors_count=1, details=None):
+        """Mark command as failed."""
+        self.status = self.Status.FAILURE
+        self.finished_at = timezone.now()
+        self.error_message = error_message
+        self.errors_count = errors_count
+        if details:
+            self.details = details
+        self.save()
+
+    @classmethod
+    def get_last_run(cls, command_name):
+        """Get the most recent execution of a command."""
+        return cls.objects.filter(command_name=command_name).first()
+
+    @classmethod
+    def get_last_success(cls, command_name):
+        """Get the most recent successful execution of a command."""
+        return cls.objects.filter(
+            command_name=command_name,
+            status=cls.Status.SUCCESS
+        ).first()

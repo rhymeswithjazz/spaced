@@ -8,11 +8,15 @@ services:
     volumes:
       # Persist SQLite database
       - flashcard_data:/app/data
+      # Persist logs for debugging
+      - flashcard_logs:/app/logs
     environment:
       - SECRET_KEY=${SECRET_KEY:?Secret key is required}
       - DEBUG=${DEBUG:-False}
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1}
       - TIME_ZONE=${TIME_ZONE:-UTC}
+      - SITE_URL=${SITE_URL:-http://localhost:8000}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
       # Email settings (optional)
       - EMAIL_BACKEND=${EMAIL_BACKEND:-django.core.mail.backends.console.EmailBackend}
       - EMAIL_HOST=${EMAIL_HOST:-}
@@ -30,4 +34,6 @@ services:
 
 volumes:
   flashcard_data:
+    driver: local
+  flashcard_logs:
     driver: local
