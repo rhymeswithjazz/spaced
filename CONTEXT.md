@@ -292,6 +292,17 @@ No external cron setup required - scheduler runs inside the container via superv
   - `/app/logs/email.log` - Email and reminder command logs
 - **Migration**: Run `python manage.py migrate` for CommandExecutionLog model
 
+### 2025-12-07 - Reminder Time Zone & Due Card Fixes
+- **What**: Fixed reminder time comparison and due card counting across the app
+- **Why**: Reminders weren't sending because time was compared in UTC instead of local timezone; new cards were incorrectly counted as "due"
+- **Impact**: Reminders now send at correct local times; due counts match across dashboard, decks, and emails
+- **Changes**:
+  - **Local Time Comparison**: Use `timezone.localtime()` to convert UTC to server timezone before comparing preferred_time
+  - **Due Card Definition**: Cards are only "due" if `repetitions > 0` (have been reviewed at least once)
+  - **Fixed Locations**: send_reminders command, deck list view, deck detail view
+  - **Achievement Emojis**: Changed from HTML entities (`&#127775;`) to UTF-8 emoji characters (`🌟`) to fix rendering
+  - **Form Styling**: Fixed select dropdown chevron positioning and time input dark mode icons
+
 ### 2025-12-06 - Docker Health Check Fix
 - **What**: Fixed container health check always reporting unhealthy in Portainer
 - **Why**: Previous health check used `curl` (not installed in python:3.11-slim) and checked `/admin/` (returns 302 redirect)
