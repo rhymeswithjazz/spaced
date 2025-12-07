@@ -77,6 +77,13 @@ Django flashcard app with SM-2 spaced repetition algorithm for optimal review sc
 {{c1::word1}} and {{c2::word2}}  - Multiple deletions (each becomes separate review)
 ```
 
+### UI Styling Conventions
+
+- **Form inputs**: Use consistent styling defined in `cards/forms.py` `StyledFormMixin`
+- **Select dropdowns**: Use `appearance-none` with custom SVG chevron for cross-browser consistency. Copy styling from `StyledFormMixin` for select elements.
+- **Color scheme**: Primary (blue), success (green), warning (yellow), danger (red)
+- **Dark mode**: All components must support dark mode via `dark:` Tailwind prefixes
+
 ### Deck Export/Import Format
 
 ```json
