@@ -93,16 +93,16 @@ class Command(BaseCommand):
 
                 # Check if should send today
                 if not self._should_send_today(reminder, current_day, now):
-                    logger.debug(
+                    logger.info(
                         f"Skipping {user.username}: not a send day "
-                        f"(frequency={reminder.frequency}, today={current_day})"
+                        f"(frequency={reminder.frequency}, custom_days={reminder.custom_days}, today=weekday {current_day})"
                     )
                     skipped_reasons['not_send_day'] += 1
                     continue
 
                 # Check if current time is within the preferred time window
                 if not self._is_within_preferred_time(reminder, now, time_window):
-                    logger.debug(
+                    logger.info(
                         f"Skipping {user.username}: outside time window "
                         f"(preferred={reminder.preferred_time}, current={now.time()}, window=±{time_window}min)"
                     )
