@@ -131,6 +131,9 @@ SITE_URL = env('SITE_URL', default='http://localhost:8000')
 LOG_LEVEL = env('LOG_LEVEL', default='INFO')
 LOG_DIR = BASE_DIR / 'logs'
 
+# Ensure logs directory exists
+LOG_DIR.mkdir(exist_ok=True)
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
