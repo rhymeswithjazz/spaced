@@ -29,7 +29,7 @@ class DeckListView(LoginRequiredMixin, ListView):
             card_count=Count('cards'),
             due_count=Count('cards', filter=Q(
                 cards__next_review__lte=now,
-                cards__repetitions__gt=0  # Exclude new cards
+                cards__has_been_reviewed=True  # Exclude new cards
             ))
         )
 
@@ -82,7 +82,7 @@ def deck_detail(request, pk):
     deck = get_object_or_404(Deck, pk=pk, owner=request.user)
     cards = deck.cards.all()
     now = timezone.now()
-    due_count = cards.filter(next_review__lte=now, repetitions__gt=0).count()
+    due_count = cards.filter(next_review__lte=now, has_been_reviewed=True).count()
 
     context = {
         'deck': deck,
@@ -216,7 +216,8 @@ def deck_reset(request, pk):
         interval=0,
         repetitions=0,
         next_review=timezone.now(),
-        last_reviewed=None
+        last_reviewed=None,
+        has_been_reviewed=False
     )
 
     # Delete all review logs for cards in this deck

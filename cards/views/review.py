@@ -36,7 +36,7 @@ def review_session(request, deck_pk=None):
     due_cards = list(Card.objects.filter(
         **deck_filter,
         next_review__lte=now,
-        repetitions__gt=0
+        has_been_reviewed=True
     ).select_related('deck')[:preferences.cards_per_session])
 
     # Fill remaining slots with new cards
@@ -45,7 +45,7 @@ def review_session(request, deck_pk=None):
     if remaining_slots > 0:
         new_cards = list(Card.objects.filter(
             **deck_filter,
-            repetitions=0
+            has_been_reviewed=False
         ).select_related('deck')[:remaining_slots])
 
     cards = due_cards + new_cards
@@ -105,7 +105,7 @@ def review_struggling(request):
     struggling_cards = list(Card.objects.filter(
         deck__owner=user,
         ease_factor__lt=2.0,
-        repetitions__gt=0
+        has_been_reviewed=True
     ).select_related('deck')[:preferences.cards_per_session])
 
     if not struggling_cards:

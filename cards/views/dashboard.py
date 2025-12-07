@@ -24,21 +24,21 @@ def dashboard(request):
         card_count=Count('cards'),
         due_count=Count('cards', filter=Q(
             cards__next_review__lte=now,
-            cards__repetitions__gt=0  # Exclude new cards
+            cards__has_been_reviewed=True  # Exclude new cards
         )),
-        new_count=Count('cards', filter=Q(cards__repetitions=0))
+        new_count=Count('cards', filter=Q(cards__has_been_reviewed=False))
     )
 
     total_cards = user_cards.count()
     # Due = cards that have been reviewed before and are scheduled for review
-    total_due = user_cards.filter(next_review__lte=now, repetitions__gt=0).count()
+    total_due = user_cards.filter(next_review__lte=now, has_been_reviewed=True).count()
     # New = cards that have never been reviewed
-    total_new = user_cards.filter(repetitions=0).count()
+    total_new = user_cards.filter(has_been_reviewed=False).count()
 
     # === PROGRESS STATS ===
     # Card status: New (never reviewed), Learning (interval < 21), Mature (interval >= 21)
-    cards_new = user_cards.filter(repetitions=0).count()
-    cards_learning = user_cards.filter(repetitions__gt=0, interval__lt=21).count()
+    cards_new = user_cards.filter(has_been_reviewed=False).count()
+    cards_learning = user_cards.filter(has_been_reviewed=True, interval__lt=21).count()
     cards_mature = user_cards.filter(interval__gte=21).count()
 
     # Retention rate (% of reviews answered correctly - quality >= 3)
@@ -50,7 +50,7 @@ def dashboard(request):
     avg_ease = user_cards.aggregate(avg=Avg('ease_factor'))['avg'] or 2.5
 
     # Struggling cards (ease factor < 2.0 and has been reviewed)
-    struggling_cards = user_cards.filter(ease_factor__lt=2.0, repetitions__gt=0).count()
+    struggling_cards = user_cards.filter(ease_factor__lt=2.0, has_been_reviewed=True).count()
 
     # === ACTIVITY STATS ===
     # Reviews today/this week/this month
@@ -122,8 +122,8 @@ def dashboard(request):
         deck_retention = round((deck_correct / deck_total_reviews * 100) if deck_total_reviews > 0 else 0, 1)
 
         deck_cards = user_cards.filter(deck=deck)
-        deck_new = deck_cards.filter(repetitions=0).count()
-        deck_learning = deck_cards.filter(repetitions__gt=0, interval__lt=21).count()
+        deck_new = deck_cards.filter(has_been_reviewed=False).count()
+        deck_learning = deck_cards.filter(has_been_reviewed=True, interval__lt=21).count()
         deck_mature = deck_cards.filter(interval__gte=21).count()
 
         deck_stats.append({

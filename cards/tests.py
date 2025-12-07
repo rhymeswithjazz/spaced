@@ -379,21 +379,24 @@ class DeckModelTests(TestCase):
             deck=self.deck,
             front='Due card',
             next_review=timezone.now() - timedelta(days=1),
-            repetitions=1  # Has been reviewed at least once
+            repetitions=1,  # Has been reviewed at least once
+            has_been_reviewed=True
         )
         # Not due card (next_review in future)
         Card.objects.create(
             deck=self.deck,
             front='Not due card',
             next_review=timezone.now() + timedelta(days=1),
-            repetitions=1
+            repetitions=1,
+            has_been_reviewed=True
         )
         # New card (never reviewed) - should NOT count as due
         Card.objects.create(
             deck=self.deck,
             front='New card',
             next_review=timezone.now() - timedelta(days=1),
-            repetitions=0  # Never reviewed
+            repetitions=0,  # Never reviewed
+            has_been_reviewed=False
         )
         self.assertEqual(self.deck.cards_due_count(), 1)
 
@@ -403,13 +406,15 @@ class DeckModelTests(TestCase):
         Card.objects.create(
             deck=self.deck,
             front='New card',
-            repetitions=0
+            repetitions=0,
+            has_been_reviewed=False
         )
         # Reviewed card
         Card.objects.create(
             deck=self.deck,
             front='Reviewed card',
-            repetitions=1
+            repetitions=1,
+            has_been_reviewed=True
         )
         self.assertEqual(self.deck.cards_new_count(), 1)
 
@@ -1124,9 +1129,10 @@ class ReviewViewTests(TestCase):
 
     def test_review_session_redirects_when_no_cards_due(self):
         """Review session should redirect when no cards are due or new."""
-        # Card is not due (next_review in future) and not new (repetitions > 0)
+        # Card is not due (next_review in future) and not new (has_been_reviewed=True)
         self.card.next_review = timezone.now() + timedelta(days=1)
         self.card.repetitions = 1  # Not a new card
+        self.card.has_been_reviewed = True
         self.card.save()
         response = self.client.get(reverse('review_session'))
         self.assertRedirects(response, reverse('dashboard'))
@@ -1202,7 +1208,8 @@ class StrugglingCardsReviewTests(TestCase):
             front='Struggling Card',
             back='Answer',
             ease_factor=1.5,
-            repetitions=2
+            repetitions=2,
+            has_been_reviewed=True
         )
 
         response = self.client.get(reverse('review_struggling'))
@@ -1218,7 +1225,8 @@ class StrugglingCardsReviewTests(TestCase):
             front='New Card',
             back='Answer',
             ease_factor=1.5,
-            repetitions=0  # Never reviewed
+            repetitions=0,  # Never reviewed
+            has_been_reviewed=False
         )
 
         response = self.client.get(reverse('review_struggling'))
@@ -1232,14 +1240,16 @@ class StrugglingCardsReviewTests(TestCase):
             front='Struggling',
             back='Answer',
             ease_factor=1.8,
-            repetitions=1
+            repetitions=1,
+            has_been_reviewed=True
         )
         normal = Card.objects.create(
             deck=self.deck,
             front='Normal',
             back='Answer',
             ease_factor=2.5,
-            repetitions=1
+            repetitions=1,
+            has_been_reviewed=True
         )
 
         response = self.client.get(reverse('review_struggling'))
@@ -1261,7 +1271,8 @@ class StrugglingCardsReviewTests(TestCase):
             front='Struggling',
             back='Answer',
             ease_factor=1.5,
-            repetitions=1
+            repetitions=1,
+            has_been_reviewed=True
         )
 
         response = self.client.get(reverse('dashboard'))
@@ -1276,7 +1287,8 @@ class StrugglingCardsReviewTests(TestCase):
             front='Normal',
             back='Answer',
             ease_factor=2.5,
-            repetitions=1
+            repetitions=1,
+            has_been_reviewed=True
         )
 
         response = self.client.get(reverse('dashboard'))
@@ -1765,20 +1777,22 @@ class DashboardStreakTests(TestCase):
 
     def test_dashboard_card_maturity_classification(self):
         """Dashboard should classify cards by maturity correctly."""
-        # New card (repetitions=0) - already exists from setUp
-        # Learning card (repetitions > 0, interval < 21)
+        # New card (has_been_reviewed=False) - already exists from setUp
+        # Learning card (has_been_reviewed=True, interval < 21)
         learning_card = Card.objects.create(
             deck=self.deck,
             front='Learning',
             repetitions=2,
-            interval=10
+            interval=10,
+            has_been_reviewed=True
         )
         # Mature card (interval >= 21)
         mature_card = Card.objects.create(
             deck=self.deck,
             front='Mature',
             repetitions=5,
-            interval=30
+            interval=30,
+            has_been_reviewed=True
         )
 
         response = self.client.get(reverse('dashboard'))
@@ -1807,13 +1821,14 @@ class SendRemindersCommandTests(TestCase):
             password='testpass123'
         )
         self.deck = Deck.objects.create(name='Test Deck', owner=self.user)
-        # Create a due card (must have repetitions > 0 to be considered "due" not "new")
+        # Create a due card (must have has_been_reviewed=True to be considered "due" not "new")
         self.card = Card.objects.create(
             deck=self.deck,
             front='Test Q',
             back='Test A',
             next_review=timezone.now() - timedelta(hours=1),
-            repetitions=1
+            repetitions=1,
+            has_been_reviewed=True
         )
         # Create reminder for user - set preferred_time to current LOCAL time for tests
         # Use localtime() since the command compares against local time
@@ -1999,7 +2014,8 @@ class SendRemindersCommandTests(TestCase):
             deck=self.deck,
             front='Q2',
             next_review=timezone.now() - timedelta(hours=2),
-            repetitions=1
+            repetitions=1,
+            has_been_reviewed=True
         )
         self.assertEqual(cmd._get_due_cards_count(self.user), 2)
 
@@ -2008,7 +2024,8 @@ class SendRemindersCommandTests(TestCase):
             deck=self.deck,
             front='Q3',
             next_review=timezone.now() + timedelta(days=1),
-            repetitions=1
+            repetitions=1,
+            has_been_reviewed=True
         )
         self.assertEqual(cmd._get_due_cards_count(self.user), 2)
 
@@ -2025,7 +2042,8 @@ class SendRemindersCommandTests(TestCase):
             deck=other_deck,
             front='Other Q',
             next_review=timezone.now() - timedelta(hours=1),
-            repetitions=1
+            repetitions=1,
+            has_been_reviewed=True
         )
 
         # Should still only see 1 card for original user
@@ -2170,7 +2188,8 @@ class SendRemindersCommandTests(TestCase):
             deck=deck2,
             front='Q2',
             next_review=timezone.now() - timedelta(hours=1),
-            repetitions=1
+            repetitions=1,
+            has_been_reviewed=True
         )
         ReviewReminder.objects.create(
             user=user2,

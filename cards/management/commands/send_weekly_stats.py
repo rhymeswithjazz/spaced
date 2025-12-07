@@ -107,7 +107,7 @@ class Command(BaseCommand):
         cards_due = Card.objects.filter(
             deck__owner=user,
             next_review__lte=timezone.now(),
-            repetitions__gt=0
+            has_been_reviewed=True
         ).count()
 
         # Per-deck breakdown

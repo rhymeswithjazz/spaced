@@ -289,7 +289,7 @@ class Command(BaseCommand):
         return Card.objects.filter(
             deck__owner=user,
             next_review__lte=timezone.now(),
-            repetitions__gt=0  # Exclude new cards (never reviewed)
+            has_been_reviewed=True  # Exclude new cards (never reviewed)
         ).count()
 
     def _send_reminder_email(self, user, due_count):

@@ -27,12 +27,12 @@ class Deck(models.Model):
         """Return count of cards due for review (excludes new cards)."""
         return self.cards.filter(
             next_review__lte=timezone.now(),
-            repetitions__gt=0  # Exclude new cards (never reviewed)
+            has_been_reviewed=True  # Exclude new cards (never reviewed)
         ).count()
 
     def cards_new_count(self):
         """Return count of new cards (never reviewed)."""
-        return self.cards.filter(repetitions=0).count()
+        return self.cards.filter(has_been_reviewed=False).count()
 
 
 class Card(models.Model):
@@ -59,6 +59,7 @@ class Card(models.Model):
     repetitions = models.IntegerField(default=0)  # Successful reviews in a row
     next_review = models.DateTimeField(default=timezone.now)
     last_reviewed = models.DateTimeField(null=True, blank=True)
+    has_been_reviewed = models.BooleanField(default=False)  # True after first review
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -106,6 +107,7 @@ class Card(models.Model):
         self.repetitions = result.repetitions
         self.next_review = result.next_review
         self.last_reviewed = timezone.now()
+        self.has_been_reviewed = True
         self.save()
 
         # Create review log
