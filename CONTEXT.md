@@ -165,34 +165,32 @@ flashcard/
 
 ### JavaScript/CSS Architecture
 
-**Current State**: JavaScript and CSS are inline in templates (base.html, review_session.html).
+JavaScript and CSS have been extracted into separate static files for better maintainability, caching, and separation of concerns.
 
-**When to split into separate files**:
-1. A single template's `<script>` block exceeds ~150-200 lines
-2. 3+ pages use the same utility functions
-3. Build tooling (bundling, minification, TypeScript) is needed
-
-**Current inline assets**:
-- `base.html`: ~100 lines JS (toast manager, theme toggle, confetti) - approaching threshold
-- `review_session.html`: ~300 lines JS (review logic) - could benefit from splitting
-- Custom CSS: ~100 lines (cloze styles, card text sizes, animations)
-
-**Recommended future structure** (when splitting):
+**Static Files Structure**:
 ```
 static/
-├── js/
-│   ├── utils.js          # showToast, showConfetti (global utilities)
-│   ├── theme.js          # theme toggle logic
-│   └── review-session.js # review session logic
 ├── css/
-│   └── components.css    # cloze styles, card text sizes, typein styles
+│   ├── main.css       # Theme transitions, logo animations (all pages)
+│   ├── landing.css    # Gradient backgrounds, floating orbs, glass effects
+│   └── review.css     # Card text sizes, cloze styles, type-in inputs
+├── js/
+│   ├── app.js         # Toast notifications, confetti, theme toggle, menus (all pages)
+│   ├── review.js      # Review session logic (initReviewSession function)
+│   ├── dashboard.js   # Statistics tab navigation
+│   └── settings.js    # Theme preview, custom days toggle
 ```
 
-**Benefits of splitting**:
-- Browser caching (static files cached, inline re-downloaded every page)
-- Easier testing with ESLint/Jest
+**What remains inline** (must run before page render):
+- Tailwind config - must execute before Tailwind processes the page
+- Theme initialization script - prevents flash of unstyled content on page load
+- Django template variables passed to JS (e.g., `initReviewSession({cards: ...})`)
+
+**Benefits**:
+- Browser caching for static assets
+- Cleaner templates with reduced complexity
+- Easier testing and linting of JavaScript
 - Better separation of concerns
-- Reduced template complexity
 
 ### Local Setup
 
@@ -310,6 +308,17 @@ The Docker container includes **supercronic** which automatically runs email com
 No external cron setup required - scheduler runs inside the container via supervisor.
 
 ## Recent Major Changes
+
+### 2025-12-07 - JavaScript/CSS Refactoring
+- **What**: Extracted inline JavaScript and CSS from templates into separate static files
+- **Why**: Improve maintainability, enable browser caching, reduce template complexity
+- **Impact**: Cleaner templates, cacheable static assets, easier testing/linting
+- **Changes**:
+  - **CSS files created**: `main.css` (theme transitions, logo animations), `landing.css` (gradients, orbs), `review.css` (card sizes, cloze styles)
+  - **JS files created**: `app.js` (toast, confetti, theme, menus), `review.js` (review session), `dashboard.js` (tabs), `settings.js` (preferences)
+  - **Templates updated**: base.html, landing.html, review_session.html, dashboard.html, settings.html
+  - **CSRF meta tag**: Added to base.html for JavaScript access to CSRF token
+  - **Inline scripts preserved**: Tailwind config and theme initialization (must run before page render)
 
 ### 2025-12-07 - Celebration Animations (Confetti)
 - **What**: Added confetti animations for session completion and achievement milestones

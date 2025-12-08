@@ -1,0 +1,148 @@
+/**
+ * Review session styles
+ * Card display, text sizing, cloze deletions, and type-in inputs
+ */
+
+/* Card text size transitions and sizes */
+.card-text {
+    transition: font-size 0.2s ease;
+}
+
+.card-text.size-small {
+    font-size: 1.125rem;
+    line-height: 1.75rem;
+}
+
+.card-text.size-medium {
+    font-size: 1.5rem;
+    line-height: 2rem;
+}
+
+.card-text.size-large {
+    font-size: 2.25rem;
+    line-height: 2.5rem;
+}
+
+.card-text.size-xlarge {
+    font-size: 3rem;
+    line-height: 1.2;
+}
+
+.card-text.size-xxlarge {
+    font-size: 4rem;
+    line-height: 1.1;
+}
+
+.card-text.size-xxxlarge {
+    font-size: 5rem;
+    line-height: 1.1;
+}
+
+/* Size button active state */
+.size-btn.active {
+    background-color: rgb(14 165 233);
+    color: white;
+}
+
+/* Cloze deletion styles */
+.cloze-blank {
+    display: inline-block;
+    min-width: 4em;
+    border-bottom: 3px solid rgb(59 130 246);
+    margin: 0 0.1em;
+}
+
+.cloze-blank.has-hint {
+    color: rgb(148 163 184);
+    font-style: italic;
+    font-size: 0.75em;
+    vertical-align: baseline;
+}
+
+.dark .cloze-blank {
+    border-bottom-color: rgb(96 165 250);
+}
+
+.dark .cloze-blank.has-hint {
+    color: rgb(100 116 139);
+}
+
+.cloze-answer {
+    display: inline;
+    padding: 0.1em 0.3em;
+    background-color: rgb(187 247 208);
+    border-radius: 0.25rem;
+    color: rgb(22 101 52);
+    font-weight: 600;
+}
+
+.dark .cloze-answer {
+    background-color: rgb(20 83 45);
+    color: rgb(187 247 208);
+}
+
+/* Type-in answer styles */
+.typein-input {
+    text-align: center;
+    font-size: inherit;
+    border: 2px solid rgb(209 213 219);
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+    width: 100%;
+    max-width: 400px;
+    margin-top: 1rem;
+    transition: border-color 0.2s;
+}
+
+.typein-input:focus {
+    outline: none;
+    border-color: rgb(59 130 246);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.dark .typein-input {
+    background-color: rgb(55 65 81);
+    border-color: rgb(75 85 99);
+    color: rgb(243 244 246);
+}
+
+.dark .typein-input:focus {
+    border-color: rgb(96 165 250);
+}
+
+.typein-result {
+    margin-top: 1rem;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+}
+
+.typein-result.correct {
+    background-color: rgb(187 247 208);
+    color: rgb(22 101 52);
+}
+
+.typein-result.incorrect {
+    background-color: rgb(254 202 202);
+    color: rgb(153 27 27);
+}
+
+.dark .typein-result.correct {
+    background-color: rgb(20 83 45);
+    color: rgb(187 247 208);
+}
+
+.dark .typein-result.incorrect {
+    background-color: rgb(127 29 29);
+    color: rgb(254 202 202);
+}
+
+.expected-answer {
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+    color: rgb(107 114 128);
+}
+
+.dark .expected-answer {
+    color: rgb(156 163 175);
+}

@@ -234,44 +234,6 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
-// Sync theme setting changes to localStorage immediately
-document.getElementById('id_theme').addEventListener('change', function(e) {
-    const theme = e.target.value;
-    if (theme === 'system') {
-        localStorage.removeItem('theme');
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        if (prefersDark) {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-        }
-    } else {
-        localStorage.setItem('theme', theme);
-        if (theme === 'dark') {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-        }
-    }
-});
-
-// Toggle custom days visibility based on frequency selection
-const frequencySelect = document.getElementById('id_frequency');
-const customDaysSection = document.getElementById('custom-days-section');
-
-function updateCustomDaysVisibility() {
-    if (frequencySelect.value === 'custom') {
-        customDaysSection.classList.remove('hidden');
-    } else {
-        customDaysSection.classList.add('hidden');
-    }
-}
-
-// Set initial state
-updateCustomDaysVisibility();
-
-// Listen for changes
-frequencySelect.addEventListener('change', updateCustomDaysVisibility);
-</script>
+{% load static %}
+<script src="{% static 'js/settings.js' %}"></script>
 {% endblock %}
