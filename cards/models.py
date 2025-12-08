@@ -1,11 +1,40 @@
 import secrets
 import uuid
+import zoneinfo
 
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
 
 from . import srs
+
+
+# Common timezone choices for the dropdown
+TIMEZONE_CHOICES = [
+    ('UTC', 'UTC'),
+    ('US/Eastern', 'US Eastern'),
+    ('US/Central', 'US Central'),
+    ('US/Mountain', 'US Mountain'),
+    ('US/Pacific', 'US Pacific'),
+    ('US/Alaska', 'US Alaska'),
+    ('US/Hawaii', 'US Hawaii'),
+    ('Europe/London', 'Europe/London'),
+    ('Europe/Paris', 'Europe/Paris'),
+    ('Europe/Berlin', 'Europe/Berlin'),
+    ('Europe/Moscow', 'Europe/Moscow'),
+    ('Asia/Tokyo', 'Asia/Tokyo'),
+    ('Asia/Shanghai', 'Asia/Shanghai'),
+    ('Asia/Singapore', 'Asia/Singapore'),
+    ('Asia/Kolkata', 'Asia/Kolkata'),
+    ('Asia/Dubai', 'Asia/Dubai'),
+    ('Australia/Sydney', 'Australia/Sydney'),
+    ('Australia/Melbourne', 'Australia/Melbourne'),
+    ('Pacific/Auckland', 'Pacific/Auckland'),
+    ('America/Toronto', 'America/Toronto'),
+    ('America/Vancouver', 'America/Vancouver'),
+    ('America/Sao_Paulo', 'America/Sao Paulo'),
+    ('America/Mexico_City', 'America/Mexico City'),
+]
 
 
 class Deck(models.Model):
@@ -189,6 +218,12 @@ class UserPreferences(models.Model):
     )
     cards_per_session = models.IntegerField(default=20)
     celebration_animations = models.BooleanField(default=True)
+    user_timezone = models.CharField(
+        max_length=50,
+        choices=TIMEZONE_CHOICES,
+        default='UTC',
+        help_text='Your local timezone for accurate daily statistics'
+    )
 
     # Email notification preferences
     email_study_reminders = models.BooleanField(default=True)
@@ -213,9 +248,14 @@ class UserPreferences(models.Model):
     def __str__(self):
         return f"Preferences for {self.user.username}"
 
+    def get_local_date(self):
+        """Get the current date in the user's timezone."""
+        user_tz = zoneinfo.ZoneInfo(self.user_timezone)
+        return timezone.now().astimezone(user_tz).date()
+
     def update_streak(self):
         """Update streak based on current date and last study date."""
-        today = timezone.now().date()
+        today = self.get_local_date()
 
         if self.last_study_date is None:
             # First study session
@@ -244,7 +284,7 @@ class UserPreferences(models.Model):
         if self.current_streak == 0:
             return False
 
-        today = timezone.now().date()
+        today = self.get_local_date()
         return self.last_study_date != today
 
 

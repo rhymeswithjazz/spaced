@@ -1,11 +1,20 @@
 """Dashboard view."""
 
+import zoneinfo
+from datetime import timedelta
+
 from django.contrib.auth.decorators import login_required
 from django.db.models import Avg, Count, Q
 from django.shortcuts import render
 from django.utils import timezone
 
 from ..models import Deck, Card, ReviewLog
+from .helpers import (
+    get_or_create_preferences,
+    get_user_local_date,
+    get_local_day_range,
+    get_local_day_start,
+)
 
 
 @login_required
@@ -13,7 +22,7 @@ def dashboard(request):
     """Main dashboard showing overview and due cards."""
     user = request.user
     now = timezone.now()
-    today = now.date()
+    today = get_user_local_date(user)  # Use user's local date, not UTC
 
     # Base querysets
     user_cards = Card.objects.filter(deck__owner=user)
@@ -53,32 +62,44 @@ def dashboard(request):
     struggling_cards = user_cards.filter(ease_factor__lt=2.0, has_been_reviewed=True).count()
 
     # === ACTIVITY STATS ===
-    # Reviews today/this week/this month
-    reviews_today = user_reviews.filter(reviewed_at__date=today).count()
+    # Reviews today/this week/this month (using user's local timezone)
+    today_start, today_end = get_local_day_range(user, today)
+    reviews_today = user_reviews.filter(
+        reviewed_at__gte=today_start,
+        reviewed_at__lt=today_end
+    ).count()
 
-    week_start = today - timezone.timedelta(days=today.weekday())
-    reviews_this_week = user_reviews.filter(reviewed_at__date__gte=week_start).count()
+    week_start = today - timedelta(days=today.weekday())
+    week_start_utc = get_local_day_start(user, week_start)
+    reviews_this_week = user_reviews.filter(reviewed_at__gte=week_start_utc).count()
 
     month_start = today.replace(day=1)
-    reviews_this_month = user_reviews.filter(reviewed_at__date__gte=month_start).count()
+    month_start_utc = get_local_day_start(user, month_start)
+    reviews_this_month = user_reviews.filter(reviewed_at__gte=month_start_utc).count()
 
     # Average reviews per day (last 30 days)
-    thirty_days_ago = today - timezone.timedelta(days=30)
-    reviews_last_30 = user_reviews.filter(reviewed_at__date__gte=thirty_days_ago).count()
+    thirty_days_ago = today - timedelta(days=30)
+    thirty_days_ago_utc = get_local_day_start(user, thirty_days_ago)
+    reviews_last_30 = user_reviews.filter(reviewed_at__gte=thirty_days_ago_utc).count()
     avg_reviews_per_day = round(reviews_last_30 / 30, 1)
 
-    # Study streak (consecutive days with reviews)
+    # Study streak (consecutive days with reviews, using user's local timezone)
     streak = 0
     for i in range(365):
-        day = today - timezone.timedelta(days=i)
-        if user_reviews.filter(reviewed_at__date=day).exists():
+        day = today - timedelta(days=i)
+        day_start, day_end = get_local_day_range(user, day)
+        if user_reviews.filter(reviewed_at__gte=day_start, reviewed_at__lt=day_end).exists():
             streak += 1
         else:
             break
 
-    # Longest streak (scan all review dates)
+    # Longest streak (scan all review dates in user's timezone)
+    # Get all reviews and convert to user's local dates
+    preferences = get_or_create_preferences(user)
+    user_tz = zoneinfo.ZoneInfo(preferences.user_timezone)
     review_dates = set(
-        user_reviews.values_list('reviewed_at__date', flat=True).distinct()
+        r.astimezone(user_tz).date()
+        for r in user_reviews.values_list('reviewed_at', flat=True)
     )
     longest_streak = 0
     if review_dates:
@@ -93,20 +114,23 @@ def dashboard(request):
         longest_streak = max(longest_streak, current_streak)
 
     # === FORECAST STATS ===
-    tomorrow = today + timezone.timedelta(days=1)
+    tomorrow = today + timedelta(days=1)
+    tomorrow_start, tomorrow_end = get_local_day_range(user, tomorrow)
     due_tomorrow = user_cards.filter(
-        next_review__date=tomorrow
+        next_review__gte=tomorrow_start,
+        next_review__lt=tomorrow_end
     ).count()
 
     # Due in next 7 days (by day)
     forecast = []
     for i in range(7):
-        day = today + timezone.timedelta(days=i)
+        day = today + timedelta(days=i)
         if i == 0:
             # Today: cards currently due
             count = total_due
         else:
-            count = user_cards.filter(next_review__date=day).count()
+            day_start, day_end = get_local_day_range(user, day)
+            count = user_cards.filter(next_review__gte=day_start, next_review__lt=day_end).count()
         forecast.append({
             'day': day,
             'day_name': 'Today' if i == 0 else ('Tomorrow' if i == 1 else day.strftime('%a')),

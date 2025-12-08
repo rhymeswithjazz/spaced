@@ -309,6 +309,21 @@ No external cron setup required - scheduler runs inside the container via superv
 
 ## Recent Major Changes
 
+### 2025-12-07 - User Timezone Support for Statistics
+- **What**: Added per-user timezone setting to fix stats resetting at UTC midnight instead of user's local midnight
+- **Why**: Dashboard statistics (reviews today, streak) were calculated using UTC dates, causing them to reset at the wrong time for non-UTC users
+- **Impact**: Users can now set their timezone in Settings; all daily statistics correctly respect their local date
+- **Changes**:
+  - **New field**: `user_timezone` CharField on UserPreferences with 23 common timezone choices
+  - **Helper functions in `cards/views/helpers.py`**:
+    - `get_user_local_date(user)` - Returns current date in user's timezone
+    - `get_local_day_range(user, date)` - Returns UTC datetime range for a local date
+    - `get_local_day_start(user, date)` - Returns UTC datetime for midnight of a local date
+  - **Dashboard fixes**: All date-based queries now use timezone-aware datetime ranges instead of `reviewed_at__date` comparisons
+  - **Streak fixes**: `update_streak()` and `check_streak_at_risk()` methods now use user's local date
+  - **Settings UI**: Added timezone dropdown in Study Preferences section
+- **Migration**: Run `python manage.py migrate` for new `user_timezone` field
+
 ### 2025-12-07 - JavaScript/CSS Refactoring
 - **What**: Extracted inline JavaScript and CSS from templates into separate static files
 - **Why**: Improve maintainability, enable browser caching, reduce template complexity

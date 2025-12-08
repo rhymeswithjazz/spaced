@@ -753,6 +753,7 @@ class UserPreferencesFormTests(TestCase):
             'theme': 'dark',
             'card_text_size': 'large',
             'cards_per_session': 20,
+            'user_timezone': 'UTC',
         })
         self.assertTrue(form.is_valid())
 
@@ -762,6 +763,7 @@ class UserPreferencesFormTests(TestCase):
             'theme': 'invalid_theme',
             'card_text_size': 'large',
             'cards_per_session': 20,
+            'user_timezone': 'UTC',
         })
         self.assertFalse(form.is_valid())
         self.assertIn('theme', form.errors)
@@ -773,6 +775,7 @@ class UserPreferencesFormTests(TestCase):
                 'theme': theme,
                 'card_text_size': 'medium',
                 'cards_per_session': 15,
+                'user_timezone': 'UTC',
             })
             self.assertTrue(form.is_valid(), f"Theme '{theme}' should be valid")
 
@@ -783,6 +786,7 @@ class UserPreferencesFormTests(TestCase):
                 'theme': 'system',
                 'card_text_size': size,
                 'cards_per_session': 10,
+                'user_timezone': 'UTC',
             })
             self.assertTrue(form.is_valid(), f"Text size '{size}' should be valid")
 
@@ -1321,6 +1325,7 @@ class SettingsViewTests(TestCase):
             'theme': 'dark',
             'card_text_size': 'xlarge',
             'cards_per_session': 30,
+            'user_timezone': 'US/Pacific',
             'enabled': True,
             'frequency': 'daily',
             'preferred_time': '10:00',
