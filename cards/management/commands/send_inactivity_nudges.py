@@ -7,6 +7,7 @@ Run this command daily:
 Sends re-engagement emails to users who haven't studied in 3+ days.
 """
 
+import zoneinfo
 from datetime import timedelta
 
 from django.conf import settings
@@ -41,19 +42,26 @@ class Command(BaseCommand):
         dry_run = options['dry_run']
         threshold_days = options['days']
         now = timezone.now()
-        threshold_date = (now - timedelta(days=threshold_days)).date()
         emails_sent = 0
 
-        # Find users who:
-        # 1. Have studied before (last_study_date is not null)
-        # 2. Haven't studied in threshold_days days
-        inactive_users = UserPreferences.objects.filter(
+        # Find users who have studied before (last_study_date is not null)
+        # We'll check the threshold per-user using their timezone
+        users_with_history = UserPreferences.objects.filter(
             last_study_date__isnull=False,
-            last_study_date__lt=threshold_date,
         ).select_related('user')
 
-        for prefs in inactive_users:
+        for prefs in users_with_history:
             user = prefs.user
+
+            # Get user's local date for accurate comparison
+            user_tz = zoneinfo.ZoneInfo(prefs.user_timezone)
+            user_today = now.astimezone(user_tz).date()
+            threshold_date = user_today - timedelta(days=threshold_days)
+
+            # Check if user has been inactive (using their local timezone)
+            if prefs.last_study_date >= threshold_date:
+                # User has studied within threshold, skip
+                continue
 
             # Check if user has email and is active
             if not user.email or not user.is_active:
@@ -77,8 +85,8 @@ class Command(BaseCommand):
                 self.stdout.write(f"Skipping {user.username}: nudge sent recently")
                 continue
 
-            # Calculate days inactive
-            days_inactive = (now.date() - prefs.last_study_date).days
+            # Calculate days inactive (using user's local date)
+            days_inactive = (user_today - prefs.last_study_date).days
 
             # Get cards due (excludes new cards that have never been reviewed)
             cards_due = Card.objects.filter(

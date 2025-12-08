@@ -12,12 +12,13 @@ reminders within a configurable time window (default: 30 minutes) of that time.
 
 import logging
 import traceback
+import zoneinfo
 
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from cards.models import ReviewReminder, Card, EmailLog, CommandExecutionLog
+from cards.models import ReviewReminder, Card, EmailLog, CommandExecutionLog, UserPreferences
 from cards.email import send_branded_email, can_send_email
 
 logger = logging.getLogger(__name__)
@@ -54,8 +55,6 @@ class Command(BaseCommand):
         dry_run = options['dry_run']
         time_window = options['time_window']
         now = timezone.now()
-        local_now = timezone.localtime(now)
-        current_day = local_now.weekday()  # 0 = Monday (use local time for day check)
 
         # Start execution log
         execution_log = None
@@ -92,20 +91,26 @@ class Command(BaseCommand):
                 user = reminder.user
                 users_processed += 1
 
-                # Check if should send today
-                if not self._should_send_today(reminder, current_day, now):
+                # Get user's timezone from preferences
+                prefs, _ = UserPreferences.objects.get_or_create(user=user)
+                user_tz = zoneinfo.ZoneInfo(prefs.user_timezone)
+                user_local_now = now.astimezone(user_tz)
+                user_current_day = user_local_now.weekday()  # 0 = Monday
+
+                # Check if should send today (using user's local day)
+                if not self._should_send_today(reminder, user_current_day):
                     logger.info(
                         f"Skipping {user.username}: not a send day "
-                        f"(frequency={reminder.frequency}, custom_days={reminder.custom_days}, today=weekday {current_day})"
+                        f"(frequency={reminder.frequency}, custom_days={reminder.custom_days}, today=weekday {user_current_day})"
                     )
                     skipped_reasons['not_send_day'] += 1
                     continue
 
-                # Check if current time is within the preferred time window
-                if not self._is_within_preferred_time(reminder, now, time_window):
+                # Check if current time is within the preferred time window (using user's local time)
+                if not self._is_within_preferred_time(reminder, user_local_now, time_window):
                     logger.info(
                         f"Skipping {user.username}: outside time window "
-                        f"(preferred={reminder.preferred_time}, current={now.time()}, window=±{time_window}min)"
+                        f"(preferred={reminder.preferred_time}, current={user_local_now.time()}, window=±{time_window}min)"
                     )
                     skipped_reasons['outside_time_window'] += 1
                     continue
@@ -242,7 +247,7 @@ class Command(BaseCommand):
         self.stdout.write(f"\nServer time: {now}")
         self.stdout.write(f"Server timezone: {settings.TIME_ZONE}")
 
-    def _should_send_today(self, reminder, current_day, now):
+    def _should_send_today(self, reminder, current_day):
         """Check if reminder should be sent today based on frequency settings."""
         if reminder.frequency == ReviewReminder.Frequency.DAILY:
             return True
@@ -253,22 +258,20 @@ class Command(BaseCommand):
             return current_day in allowed_days
         return False
 
-    def _is_within_preferred_time(self, reminder, now, time_window_minutes):
+    def _is_within_preferred_time(self, reminder, user_local_now, time_window_minutes):
         """
         Check if the current time is within the time window of the user's preferred time.
 
         Args:
             reminder: ReviewReminder instance with preferred_time field
-            now: Current datetime (timezone-aware)
+            user_local_now: Current datetime in user's local timezone
             time_window_minutes: Number of minutes before/after preferred time to allow
 
         Returns:
             True if current time is within the window, False otherwise
         """
-        # Convert to local time (respects Django TIME_ZONE setting)
-        # This is important because preferred_time is stored in the user's local timezone
-        local_now = timezone.localtime(now)
-        current_time = local_now.time()
+        # user_local_now is already in user's timezone
+        current_time = user_local_now.time()
         preferred = reminder.preferred_time
 
         # Convert times to minutes since midnight for easier comparison

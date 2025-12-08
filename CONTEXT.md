@@ -310,6 +310,31 @@ No external cron setup required - scheduler runs inside the container via superv
 
 ## Recent Major Changes
 
+### 2025-12-08 - Comprehensive Timezone Fix for Email Commands
+- **What**: Fixed UTC vs user timezone bugs across all email management commands and dashboard streak display
+- **Why**: Email commands were using UTC dates instead of user's configured timezone, causing incorrect "hours remaining" calculations and wrong date comparisons
+- **Impact**: All email reminders now correctly use user's timezone; dashboard streak shows correctly even before studying today
+- **Changes**:
+  - **`send_streak_reminders.py`**:
+    - Uses `prefs.get_local_date()` to check if user studied today (was using UTC date)
+    - Calculates hours until user's local midnight (was using UTC midnight)
+  - **`send_inactivity_nudges.py`**:
+    - Calculates threshold date per-user using their timezone
+    - Correctly compares `last_study_date` with user's local date
+  - **`send_weekly_stats.py`**:
+    - Week boundaries calculated per-user using their timezone
+    - Converts local date ranges to UTC for database queries
+  - **`send_reminders.py`**:
+    - Gets user's timezone from UserPreferences for each reminder
+    - Day-of-week check uses user's local day
+    - Preferred time comparison uses user's local time
+  - **`dashboard.py`**:
+    - Now uses stored `UserPreferences.current_streak` and `longest_streak` instead of recalculating
+    - Streak visible if studied yesterday (at risk but not broken)
+    - Streak resets to 0 only if gap > 1 day from last study
+  - **Test fixes**: Updated tests to use UTC explicitly when creating mock datetimes
+- **Behavior Change**: Dashboard streak now shows your current streak even if you haven't studied today yet (as long as you studied yesterday). Previously it showed 0 until you studied today.
+
 ### 2025-12-07 - User Timezone Support for Statistics
 - **What**: Added per-user timezone setting to fix stats resetting at UTC midnight instead of user's local midnight
 - **Why**: Dashboard statistics (reviews today, streak) were calculated using UTC dates, causing them to reset at the wrong time for non-UTC users

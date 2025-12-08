@@ -7,6 +7,7 @@ Run this command on Sundays:
 Sends weekly progress summary to all active users.
 """
 
+import zoneinfo
 from datetime import timedelta
 
 from django.conf import settings
@@ -33,12 +34,6 @@ class Command(BaseCommand):
         now = timezone.now()
         emails_sent = 0
 
-        # Calculate date ranges
-        week_end = now.date()
-        week_start = week_end - timedelta(days=7)
-        prev_week_end = week_start
-        prev_week_start = prev_week_end - timedelta(days=7)
-
         # Get all users with preferences
         for prefs in UserPreferences.objects.select_related('user').all():
             user = prefs.user
@@ -57,8 +52,16 @@ class Command(BaseCommand):
                 self.stdout.write(f"Skipping {user.username}: already sent this week")
                 continue
 
+            # Calculate date ranges using user's timezone
+            user_tz = zoneinfo.ZoneInfo(prefs.user_timezone)
+            user_today = now.astimezone(user_tz).date()
+            week_end = user_today
+            week_start = week_end - timedelta(days=7)
+            prev_week_end = week_start
+            prev_week_start = prev_week_end - timedelta(days=7)
+
             # Gather statistics
-            stats = self._gather_stats(user, week_start, week_end, prev_week_start, prev_week_end)
+            stats = self._gather_stats(user, prefs, week_start, week_end, prev_week_start, prev_week_end)
 
             # Skip if no activity at all
             if stats['cards_reviewed'] == 0 and stats['cards_reviewed_last_week'] == 0:
@@ -78,20 +81,33 @@ class Command(BaseCommand):
             self.style.SUCCESS(f"Sent {emails_sent} weekly stats email(s)")
         )
 
-    def _gather_stats(self, user, week_start, week_end, prev_week_start, prev_week_end):
+    def _gather_stats(self, user, prefs, week_start, week_end, prev_week_start, prev_week_end):
         """Gather weekly statistics for a user."""
+        from datetime import datetime, time, timezone as dt_timezone
+
+        # Convert local dates to UTC datetime ranges for accurate filtering
+        user_tz = zoneinfo.ZoneInfo(prefs.user_timezone)
+
+        # This week: from week_start midnight to week_end end of day (in user's timezone)
+        this_week_start_utc = datetime.combine(week_start, time.min, tzinfo=user_tz).astimezone(dt_timezone.utc)
+        this_week_end_utc = datetime.combine(week_end + timedelta(days=1), time.min, tzinfo=user_tz).astimezone(dt_timezone.utc)
+
+        # Last week
+        last_week_start_utc = datetime.combine(prev_week_start, time.min, tzinfo=user_tz).astimezone(dt_timezone.utc)
+        last_week_end_utc = datetime.combine(prev_week_end, time.min, tzinfo=user_tz).astimezone(dt_timezone.utc)
+
         # This week's reviews
         this_week_reviews = ReviewLog.objects.filter(
             card__deck__owner=user,
-            reviewed_at__date__gte=week_start,
-            reviewed_at__date__lte=week_end,
+            reviewed_at__gte=this_week_start_utc,
+            reviewed_at__lt=this_week_end_utc,
         )
 
         # Last week's reviews
         last_week_reviews = ReviewLog.objects.filter(
             card__deck__owner=user,
-            reviewed_at__date__gte=prev_week_start,
-            reviewed_at__date__lt=prev_week_end,
+            reviewed_at__gte=last_week_start_utc,
+            reviewed_at__lt=last_week_end_utc,
         )
 
         # Calculate stats

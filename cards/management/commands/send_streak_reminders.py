@@ -10,6 +10,7 @@ Sends reminders to users who:
 - Haven't received a streak reminder today
 """
 
+import zoneinfo
 from datetime import timedelta
 
 from django.conf import settings
@@ -32,19 +33,21 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         dry_run = options['dry_run']
-        now = timezone.now()
-        today = now.date()
         reminders_sent = 0
 
-        # Find users with active streaks who haven't studied today
+        # Find users with active streaks
         users_at_risk = UserPreferences.objects.filter(
             current_streak__gt=0,
-        ).exclude(
-            last_study_date=today,
         ).select_related('user')
 
         for prefs in users_at_risk:
             user = prefs.user
+
+            # Check if user has studied today (using their local timezone)
+            user_today = prefs.get_local_date()
+            if prefs.last_study_date == user_today:
+                # Already studied today, no reminder needed
+                continue
 
             # Check if user has email and is active
             if not user.email or not user.is_active:
@@ -76,10 +79,12 @@ class Command(BaseCommand):
         """Send the streak reminder email."""
         subject = f"Don't lose your {prefs.current_streak}-day streak!"
 
-        # Calculate hours remaining until midnight
-        now = timezone.now()
-        midnight = now.replace(hour=23, minute=59, second=59)
-        hours_remaining = max(1, int((midnight - now).seconds / 3600))
+        # Calculate hours remaining until midnight in user's timezone
+        user_tz = zoneinfo.ZoneInfo(prefs.user_timezone)
+        now_local = timezone.now().astimezone(user_tz)
+        # End of day in user's timezone
+        local_midnight = now_local.replace(hour=23, minute=59, second=59)
+        hours_remaining = max(1, int((local_midnight - now_local).seconds / 3600))
 
         # Build review URL
         base_url = getattr(settings, 'SITE_URL', 'http://localhost:8000').rstrip('/')

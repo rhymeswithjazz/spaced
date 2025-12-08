@@ -1,6 +1,5 @@
 """Dashboard view."""
 
-import zoneinfo
 from datetime import timedelta
 
 from django.contrib.auth.decorators import login_required
@@ -83,35 +82,26 @@ def dashboard(request):
     reviews_last_30 = user_reviews.filter(reviewed_at__gte=thirty_days_ago_utc).count()
     avg_reviews_per_day = round(reviews_last_30 / 30, 1)
 
-    # Study streak (consecutive days with reviews, using user's local timezone)
-    streak = 0
-    for i in range(365):
-        day = today - timedelta(days=i)
-        day_start, day_end = get_local_day_range(user, day)
-        if user_reviews.filter(reviewed_at__gte=day_start, reviewed_at__lt=day_end).exists():
-            streak += 1
-        else:
-            break
-
-    # Longest streak (scan all review dates in user's timezone)
-    # Get all reviews and convert to user's local dates
+    # Study streak - use stored values from UserPreferences
+    # These are updated when user completes reviews (see update_streak method)
     preferences = get_or_create_preferences(user)
-    user_tz = zoneinfo.ZoneInfo(preferences.user_timezone)
-    review_dates = set(
-        r.astimezone(user_tz).date()
-        for r in user_reviews.values_list('reviewed_at', flat=True)
-    )
-    longest_streak = 0
-    if review_dates:
-        sorted_dates = sorted(review_dates)
-        current_streak = 1
-        for i in range(1, len(sorted_dates)):
-            if (sorted_dates[i] - sorted_dates[i-1]).days == 1:
-                current_streak += 1
-            else:
-                longest_streak = max(longest_streak, current_streak)
-                current_streak = 1
-        longest_streak = max(longest_streak, current_streak)
+
+    # Check if streak is still valid (studied today or yesterday)
+    # If user hasn't studied in more than 1 day, streak should be 0
+    if preferences.last_study_date is not None:
+        days_since_study = (today - preferences.last_study_date).days
+        if days_since_study > 1:
+            # Streak is broken - reset it
+            streak = 0
+            if preferences.current_streak != 0:
+                preferences.current_streak = 0
+                preferences.save(update_fields=['current_streak'])
+        else:
+            streak = preferences.current_streak
+    else:
+        streak = 0
+
+    longest_streak = preferences.longest_streak
 
     # === FORECAST STATS ===
     tomorrow = today + timedelta(days=1)

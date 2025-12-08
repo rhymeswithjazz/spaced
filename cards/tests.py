@@ -7,7 +7,7 @@ Test organization:
 - ModelTests: Django model tests for Card, Deck, ReviewLog
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone as dt_timezone
 from django.test import TestCase
 from django.contrib.auth.models import User
 from django.utils import timezone
@@ -1646,6 +1646,9 @@ class DashboardStreakTests(TestCase):
             back='Test A'
         )
         self.client.login(username='testuser', password='testpass123')
+        # Get or create user preferences
+        from .models import UserPreferences
+        self.prefs, _ = UserPreferences.objects.get_or_create(user=self.user)
 
     def _create_review_on_date(self, date):
         """Helper to create a review log on a specific date."""
@@ -1663,8 +1666,16 @@ class DashboardStreakTests(TestCase):
         )
         return review
 
+    def _set_streak_state(self, current_streak, longest_streak, last_study_date):
+        """Helper to set the user's streak state directly."""
+        self.prefs.current_streak = current_streak
+        self.prefs.longest_streak = longest_streak
+        self.prefs.last_study_date = last_study_date
+        self.prefs.save()
+
     def test_streak_with_no_reviews(self):
         """Streak should be 0 with no review history."""
+        # UserPreferences defaults to current_streak=0, longest_streak=0
         response = self.client.get(reverse('dashboard'))
         self.assertEqual(response.context['streak'], 0)
         self.assertEqual(response.context['longest_streak'], 0)
@@ -1673,6 +1684,8 @@ class DashboardStreakTests(TestCase):
         """Streak should be 1 with only today's review."""
         today = timezone.now().date()
         self._create_review_on_date(today)
+        # Simulate what happens when user reviews: streak is updated
+        self._set_streak_state(current_streak=1, longest_streak=1, last_study_date=today)
 
         response = self.client.get(reverse('dashboard'))
         self.assertEqual(response.context['streak'], 1)
@@ -1682,6 +1695,8 @@ class DashboardStreakTests(TestCase):
         today = timezone.now().date()
         for i in range(5):
             self._create_review_on_date(today - timedelta(days=i))
+        # Simulate 5-day streak ending today
+        self._set_streak_state(current_streak=5, longest_streak=5, last_study_date=today)
 
         response = self.client.get(reverse('dashboard'))
         self.assertEqual(response.context['streak'], 5)
@@ -1692,26 +1707,47 @@ class DashboardStreakTests(TestCase):
         # Reviews today and yesterday
         self._create_review_on_date(today)
         self._create_review_on_date(today - timedelta(days=1))
-        # Gap on day 2, then review on day 3
+        # Gap on day 2, then review on day 3 (doesn't matter for current streak)
         self._create_review_on_date(today - timedelta(days=3))
+        # Current streak is 2 (today + yesterday), longest is 2
+        self._set_streak_state(current_streak=2, longest_streak=2, last_study_date=today)
 
         response = self.client.get(reverse('dashboard'))
         self.assertEqual(response.context['streak'], 2)  # Only today + yesterday
 
-    def test_streak_zero_if_no_review_today(self):
-        """Current streak should be 0 if no review today."""
+    def test_streak_shows_if_studied_yesterday(self):
+        """Streak should show if user studied yesterday (at risk but not broken)."""
         today = timezone.now().date()
+        yesterday = today - timedelta(days=1)
         # Only reviews from yesterday and before
-        self._create_review_on_date(today - timedelta(days=1))
+        self._create_review_on_date(yesterday)
         self._create_review_on_date(today - timedelta(days=2))
+        # User has a 2-day streak from yesterday
+        self._set_streak_state(current_streak=2, longest_streak=2, last_study_date=yesterday)
 
         response = self.client.get(reverse('dashboard'))
+        # Streak is still visible (at risk) since last study was yesterday
+        self.assertEqual(response.context['streak'], 2)
+
+    def test_streak_broken_if_gap_more_than_one_day(self):
+        """Streak should be 0 if last study was more than 1 day ago."""
+        today = timezone.now().date()
+        two_days_ago = today - timedelta(days=2)
+        # Review from 2 days ago
+        self._create_review_on_date(two_days_ago)
+        # User had a streak but it's now broken (gap > 1 day)
+        self._set_streak_state(current_streak=3, longest_streak=3, last_study_date=two_days_ago)
+
+        response = self.client.get(reverse('dashboard'))
+        # Streak should be reset to 0 since gap > 1 day
         self.assertEqual(response.context['streak'], 0)
 
     def test_longest_streak_single_day(self):
         """Longest streak should be 1 with single review day."""
         today = timezone.now().date()
         self._create_review_on_date(today - timedelta(days=10))
+        # User studied once, longest streak is 1
+        self._set_streak_state(current_streak=0, longest_streak=1, last_study_date=today - timedelta(days=10))
 
         response = self.client.get(reverse('dashboard'))
         self.assertEqual(response.context['longest_streak'], 1)
@@ -1730,6 +1766,8 @@ class DashboardStreakTests(TestCase):
         self._create_review_on_date(today - timedelta(days=8))
         self._create_review_on_date(today - timedelta(days=7))
         self._create_review_on_date(today - timedelta(days=6))
+        # Set stored streak values (longest was 5, current is 0 since gap > 1 day)
+        self._set_streak_state(current_streak=0, longest_streak=5, last_study_date=today - timedelta(days=6))
 
         response = self.client.get(reverse('dashboard'))
         self.assertEqual(response.context['longest_streak'], 5)
@@ -1746,6 +1784,8 @@ class DashboardStreakTests(TestCase):
         self._create_review_on_date(today - timedelta(days=2))
         self._create_review_on_date(today - timedelta(days=1))
         self._create_review_on_date(today)
+        # Set stored streak values (current 4-day streak ending today)
+        self._set_streak_state(current_streak=4, longest_streak=4, last_study_date=today)
 
         response = self.client.get(reverse('dashboard'))
         self.assertEqual(response.context['longest_streak'], 4)
@@ -1759,6 +1799,8 @@ class DashboardStreakTests(TestCase):
         self._create_review_on_date(today)
         # One review yesterday
         self._create_review_on_date(today - timedelta(days=1))
+        # Set stored streak values (2-day streak: today + yesterday)
+        self._set_streak_state(current_streak=2, longest_streak=2, last_study_date=today)
 
         response = self.client.get(reverse('dashboard'))
         self.assertEqual(response.context['streak'], 2)  # Not 4
@@ -1835,9 +1877,13 @@ class SendRemindersCommandTests(TestCase):
             repetitions=1,
             has_been_reviewed=True
         )
-        # Create reminder for user - set preferred_time to current LOCAL time for tests
-        # Use localtime() since the command compares against local time
-        current_time = timezone.localtime(timezone.now()).time()
+        # Create reminder for user - set preferred_time to current UTC time
+        # Since user_timezone defaults to UTC, we use UTC time
+        current_time = timezone.now().time()
+        # Create user preferences (required for timezone handling)
+        from .models import UserPreferences
+        self.prefs, _ = UserPreferences.objects.get_or_create(user=self.user)
+
         self.reminder = ReviewReminder.objects.create(
             user=self.user,
             enabled=True,
@@ -1853,7 +1899,7 @@ class SendRemindersCommandTests(TestCase):
 
         # Test all days of the week
         for day in range(7):
-            result = cmd._should_send_today(self.reminder, day, timezone.now())
+            result = cmd._should_send_today(self.reminder, day)
             self.assertTrue(result, f"Daily should send on day {day}")
 
     def test_should_send_today_weekly_monday(self):
@@ -1863,12 +1909,12 @@ class SendRemindersCommandTests(TestCase):
         self.reminder.frequency = ReviewReminder.Frequency.WEEKLY
 
         # Monday should return True
-        self.assertTrue(cmd._should_send_today(self.reminder, 0, timezone.now()))
+        self.assertTrue(cmd._should_send_today(self.reminder, 0))
 
         # Other days should return False
         for day in range(1, 7):
             self.assertFalse(
-                cmd._should_send_today(self.reminder, day, timezone.now()),
+                cmd._should_send_today(self.reminder, day),
                 f"Weekly should not send on day {day}"
             )
 
@@ -1880,15 +1926,15 @@ class SendRemindersCommandTests(TestCase):
         self.reminder.custom_days = '0,2,4'  # Monday, Wednesday, Friday
 
         # Should send on specified days
-        self.assertTrue(cmd._should_send_today(self.reminder, 0, timezone.now()))
-        self.assertTrue(cmd._should_send_today(self.reminder, 2, timezone.now()))
-        self.assertTrue(cmd._should_send_today(self.reminder, 4, timezone.now()))
+        self.assertTrue(cmd._should_send_today(self.reminder, 0))
+        self.assertTrue(cmd._should_send_today(self.reminder, 2))
+        self.assertTrue(cmd._should_send_today(self.reminder, 4))
 
         # Should not send on other days
-        self.assertFalse(cmd._should_send_today(self.reminder, 1, timezone.now()))
-        self.assertFalse(cmd._should_send_today(self.reminder, 3, timezone.now()))
-        self.assertFalse(cmd._should_send_today(self.reminder, 5, timezone.now()))
-        self.assertFalse(cmd._should_send_today(self.reminder, 6, timezone.now()))
+        self.assertFalse(cmd._should_send_today(self.reminder, 1))
+        self.assertFalse(cmd._should_send_today(self.reminder, 3))
+        self.assertFalse(cmd._should_send_today(self.reminder, 5))
+        self.assertFalse(cmd._should_send_today(self.reminder, 6))
 
     def test_should_send_today_custom_empty(self):
         """Custom frequency with empty days should return False."""
@@ -1898,7 +1944,7 @@ class SendRemindersCommandTests(TestCase):
         self.reminder.custom_days = ''
 
         for day in range(7):
-            self.assertFalse(cmd._should_send_today(self.reminder, day, timezone.now()))
+            self.assertFalse(cmd._should_send_today(self.reminder, day))
 
     def test_is_within_preferred_time_exact_match(self):
         """Should return True when current time matches preferred time."""
@@ -1907,7 +1953,7 @@ class SendRemindersCommandTests(TestCase):
         cmd = Command()
 
         self.reminder.preferred_time = time(9, 0)
-        now = timezone.make_aware(datetime(2025, 12, 1, 9, 0, 0))
+        now = datetime(2025, 12, 1, 9, 0, 0, tzinfo=dt_timezone.utc)
 
         self.assertTrue(cmd._is_within_preferred_time(self.reminder, now, 30))
 
@@ -1920,11 +1966,11 @@ class SendRemindersCommandTests(TestCase):
         self.reminder.preferred_time = time(9, 0)
 
         # 15 minutes before - should be within 30 minute window
-        now = timezone.make_aware(datetime(2025, 12, 1, 8, 45, 0))
+        now = datetime(2025, 12, 1, 8, 45, 0, tzinfo=dt_timezone.utc)
         self.assertTrue(cmd._is_within_preferred_time(self.reminder, now, 30))
 
         # 15 minutes after - should be within 30 minute window
-        now = timezone.make_aware(datetime(2025, 12, 1, 9, 15, 0))
+        now = datetime(2025, 12, 1, 9, 15, 0, tzinfo=dt_timezone.utc)
         self.assertTrue(cmd._is_within_preferred_time(self.reminder, now, 30))
 
     def test_is_within_preferred_time_outside_window(self):
@@ -1936,11 +1982,11 @@ class SendRemindersCommandTests(TestCase):
         self.reminder.preferred_time = time(9, 0)
 
         # 45 minutes before - outside 30 minute window
-        now = timezone.make_aware(datetime(2025, 12, 1, 8, 15, 0))
+        now = datetime(2025, 12, 1, 8, 15, 0, tzinfo=dt_timezone.utc)
         self.assertFalse(cmd._is_within_preferred_time(self.reminder, now, 30))
 
         # 45 minutes after - outside 30 minute window
-        now = timezone.make_aware(datetime(2025, 12, 1, 9, 45, 0))
+        now = datetime(2025, 12, 1, 9, 45, 0, tzinfo=dt_timezone.utc)
         self.assertFalse(cmd._is_within_preferred_time(self.reminder, now, 30))
 
     def test_is_within_preferred_time_midnight_wraparound(self):
@@ -1953,11 +1999,11 @@ class SendRemindersCommandTests(TestCase):
         self.reminder.preferred_time = time(23, 45)
 
         # 15 minutes after midnight - should be within 30 minute window
-        now = timezone.make_aware(datetime(2025, 12, 2, 0, 15, 0))
+        now = datetime(2025, 12, 2, 0, 15, 0, tzinfo=dt_timezone.utc)
         self.assertTrue(cmd._is_within_preferred_time(self.reminder, now, 30))
 
         # 45 minutes after midnight - outside 30 minute window
-        now = timezone.make_aware(datetime(2025, 12, 2, 0, 45, 0))
+        now = datetime(2025, 12, 2, 0, 45, 0, tzinfo=dt_timezone.utc)
         self.assertFalse(cmd._is_within_preferred_time(self.reminder, now, 30))
 
     @patch('cards.management.commands.send_reminders.send_branded_email')
@@ -1970,7 +2016,7 @@ class SendRemindersCommandTests(TestCase):
         self.reminder.save()
 
         # Mock current time to 2:00 PM (5 hours after preferred time)
-        afternoon = timezone.make_aware(datetime(2025, 12, 1, 14, 0, 0))
+        afternoon = datetime(2025, 12, 1, 14, 0, 0, tzinfo=dt_timezone.utc)
         self.card.next_review = afternoon - timedelta(hours=1)
         self.card.save()
 
@@ -1991,7 +2037,7 @@ class SendRemindersCommandTests(TestCase):
         self.reminder.save()
 
         # Mock current time to 10:00 AM (60 minutes after preferred time)
-        morning = timezone.make_aware(datetime(2025, 12, 1, 10, 0, 0))
+        morning = datetime(2025, 12, 1, 10, 0, 0, tzinfo=dt_timezone.utc)
         self.card.next_review = morning - timedelta(hours=1)
         self.card.save()
 
@@ -2138,7 +2184,7 @@ class SendRemindersCommandTests(TestCase):
 
         # Create a fake Tuesday datetime
         # Start from a known Monday and add 1 day
-        base = timezone.make_aware(datetime(2025, 12, 1, 12, 0, 0))  # Monday Dec 1, 2025
+        base = datetime(2025, 12, 1, 12, 0, 0, tzinfo=dt_timezone.utc)  # Monday Dec 1, 2025
         tuesday = base + timedelta(days=1)
 
         # Make the card due relative to this mocked time
@@ -2162,7 +2208,7 @@ class SendRemindersCommandTests(TestCase):
         self.reminder.save()
 
         # Create a fake Monday datetime
-        monday = timezone.make_aware(datetime(2025, 12, 1, 12, 0, 0))  # Monday Dec 1, 2025
+        monday = datetime(2025, 12, 1, 12, 0, 0, tzinfo=dt_timezone.utc)  # Monday Dec 1, 2025
 
         # Make the card due relative to this mocked time
         self.card.next_review = monday - timedelta(hours=1)
@@ -2182,7 +2228,7 @@ class SendRemindersCommandTests(TestCase):
     def test_handle_multiple_users(self, mock_send_email):
         """Should handle multiple users with reminders."""
         from cards.models import UserPreferences as UP
-        current_time = timezone.localtime(timezone.now()).time()
+        current_time = timezone.now().time()  # UTC time to match user's default timezone
         # Create second user with reminder and due cards
         user2 = User.objects.create_user(
             username='user2', email='user2@example.com', password='pass'
