@@ -37,6 +37,7 @@ A self-hosted spaced repetition flashcard application built with Django. Designe
 - `gunicorn` - Production WSGI server
 - `pillow` - Image processing for email logo resizing
 - `supervisor` - Process management in container
+- `tzdata` - IANA timezone database (required for slim Docker images)
 
 ## Architecture
 
@@ -322,6 +323,7 @@ No external cron setup required - scheduler runs inside the container via superv
   - **Dashboard fixes**: All date-based queries now use timezone-aware datetime ranges instead of `reviewed_at__date` comparisons
   - **Streak fixes**: `update_streak()` and `check_streak_at_risk()` methods now use user's local date
   - **Settings UI**: Added timezone dropdown in Study Preferences section
+  - **New dependency**: `tzdata` package for timezone database in slim Docker images
 - **Migration**: Run `python manage.py migrate` for new `user_timezone` field
 
 ### 2025-12-07 - JavaScript/CSS Refactoring
