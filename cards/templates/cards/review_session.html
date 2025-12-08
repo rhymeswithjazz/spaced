@@ -43,6 +43,61 @@
         background-color: rgb(20 83 45);
         color: rgb(187 247 208);
     }
+    /* Type-in answer styles */
+    .typein-input {
+        text-align: center;
+        font-size: inherit;
+        border: 2px solid rgb(209 213 219);
+        border-radius: 0.5rem;
+        padding: 0.75rem 1rem;
+        width: 100%;
+        max-width: 400px;
+        margin-top: 1rem;
+        transition: border-color 0.2s;
+    }
+    .typein-input:focus {
+        outline: none;
+        border-color: rgb(59 130 246);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    .dark .typein-input {
+        background-color: rgb(55 65 81);
+        border-color: rgb(75 85 99);
+        color: rgb(243 244 246);
+    }
+    .dark .typein-input:focus {
+        border-color: rgb(96 165 250);
+    }
+    .typein-result {
+        margin-top: 1rem;
+        padding: 0.75rem 1.5rem;
+        border-radius: 0.5rem;
+        font-weight: 600;
+    }
+    .typein-result.correct {
+        background-color: rgb(187 247 208);
+        color: rgb(22 101 52);
+    }
+    .typein-result.incorrect {
+        background-color: rgb(254 202 202);
+        color: rgb(153 27 27);
+    }
+    .dark .typein-result.correct {
+        background-color: rgb(20 83 45);
+        color: rgb(187 247 208);
+    }
+    .dark .typein-result.incorrect {
+        background-color: rgb(127 29 29);
+        color: rgb(254 202 202);
+    }
+    .expected-answer {
+        margin-top: 0.5rem;
+        font-size: 0.875rem;
+        color: rgb(107 114 128);
+    }
+    .dark .expected-answer {
+        color: rgb(156 163 175);
+    }
 </style>
 {% endblock %}
 
@@ -83,6 +138,12 @@
                 <div id="card-front" class="w-full">
                     <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Question</p>
                     <p id="front-text" class="card-text text-gray-900 dark:text-white whitespace-pre-wrap"></p>
+                    <!-- Type-in input (hidden for non-typein cards) -->
+                    <div id="typein-container" class="hidden flex flex-col items-center">
+                        <input type="text" id="typein-input" class="typein-input" placeholder="Type your answer..." autocomplete="off">
+                        <div id="typein-result" class="hidden typein-result"></div>
+                        <div id="expected-answer" class="hidden expected-answer"></div>
+                    </div>
                 </div>
 
                 <!-- Back Side (hidden initially) -->
@@ -101,10 +162,17 @@
 
         <!-- Actions -->
         <div class="bg-gray-50 dark:bg-gray-900 px-4 sm:px-8 py-4 sm:py-6">
-            <!-- Show Answer Button -->
+            <!-- Show Answer Button (for basic/cloze cards) -->
             <div id="show-answer-container" class="flex justify-center">
                 <button id="show-answer-btn" class="px-8 py-3 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg shadow transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
                     Show Answer
+                </button>
+            </div>
+
+            <!-- Check Answer Button (for type-in cards) -->
+            <div id="check-answer-container" class="hidden flex justify-center">
+                <button id="check-answer-btn" class="px-8 py-3 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg shadow transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                    Check Answer
                 </button>
             </div>
 
@@ -177,7 +245,7 @@
     <!-- Keyboard shortcuts hint -->
     <div class="mt-4 text-center text-sm text-gray-500 dark:text-gray-400">
         <span class="hidden sm:inline">Keyboard shortcuts: </span>
-        <kbd class="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-xs">Space</kbd> show answer,
+        <kbd class="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-xs">Space</kbd>/<kbd class="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-xs">Enter</kbd> show/check answer,
         <kbd class="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-xs">1-4</kbd> rate card
     </div>
 </div>
@@ -194,6 +262,7 @@
     // State
     let currentIndex = 0;
     let showingAnswer = false;
+    let answerChecked = false;  // For type-in cards
     let stats = { reviewed: 0, correct: 0, again: 0 };
     let currentTextSize = localStorage.getItem('cardTextSize') || defaultTextSize;
 
@@ -209,6 +278,12 @@
     const showAnswerContainer = document.getElementById('show-answer-container');
     const ratingContainer = document.getElementById('rating-container');
     const showAnswerBtn = document.getElementById('show-answer-btn');
+    const checkAnswerContainer = document.getElementById('check-answer-container');
+    const checkAnswerBtn = document.getElementById('check-answer-btn');
+    const typeinContainer = document.getElementById('typein-container');
+    const typeinInput = document.getElementById('typein-input');
+    const typeinResult = document.getElementById('typein-result');
+    const expectedAnswer = document.getElementById('expected-answer');
     const progressBar = document.getElementById('progress-bar');
     const progressText = document.getElementById('progress-text');
     const progressTextDesktop = document.getElementById('progress-text-desktop');
@@ -246,6 +321,48 @@
 
     function isClozeCard(card) {
         return card.card_type === 'cloze';
+    }
+
+    function isTypeinCard(card) {
+        return card.card_type === 'typein';
+    }
+
+    // Answer comparison for type-in cards (case-insensitive, trimmed)
+    function normalizeAnswer(text) {
+        return text.trim().toLowerCase();
+    }
+
+    function compareAnswers(userAnswer, correctAnswer) {
+        return normalizeAnswer(userAnswer) === normalizeAnswer(correctAnswer);
+    }
+
+    function checkTypeinAnswer() {
+        const card = cards[currentIndex];
+        const userAnswer = typeinInput.value;
+        const correctAnswer = card.back;
+        const isCorrect = compareAnswers(userAnswer, correctAnswer);
+
+        // Show result
+        typeinResult.classList.remove('hidden', 'correct', 'incorrect');
+        if (isCorrect) {
+            typeinResult.textContent = '✓ Correct!';
+            typeinResult.classList.add('correct');
+            expectedAnswer.classList.add('hidden');
+        } else {
+            typeinResult.textContent = '✗ Incorrect';
+            typeinResult.classList.add('incorrect');
+            expectedAnswer.textContent = `Expected: ${correctAnswer}`;
+            expectedAnswer.classList.remove('hidden');
+        }
+
+        // Disable input
+        typeinInput.disabled = true;
+
+        // Show rating buttons
+        checkAnswerContainer.classList.add('hidden');
+        ratingContainer.classList.remove('hidden');
+        answerChecked = true;
+        showingAnswer = true;
     }
 
     // Text size functions
@@ -286,7 +403,7 @@
             frontText.innerHTML = renderClozeQuestion(card.front, activeCloze);
             backText.innerHTML = renderClozeAnswer(card.front, activeCloze);
         } else {
-            // Basic card: standard front/back
+            // Basic or Type-in card: standard front/back
             frontText.textContent = card.front;
             backText.textContent = card.back;
         }
@@ -298,11 +415,28 @@
             notesContainer.classList.add('hidden');
         }
 
+        // Handle type-in cards
+        if (isTypeinCard(card)) {
+            typeinContainer.classList.remove('hidden');
+            typeinInput.value = '';
+            typeinInput.disabled = false;
+            typeinResult.classList.add('hidden');
+            expectedAnswer.classList.add('hidden');
+            showAnswerContainer.classList.add('hidden');
+            checkAnswerContainer.classList.remove('hidden');
+            // Focus the input after a brief delay for smooth transition
+            setTimeout(() => typeinInput.focus(), 100);
+        } else {
+            typeinContainer.classList.add('hidden');
+            showAnswerContainer.classList.remove('hidden');
+            checkAnswerContainer.classList.add('hidden');
+        }
+
         // Reset view
         cardBack.classList.add('hidden');
-        showAnswerContainer.classList.remove('hidden');
         ratingContainer.classList.add('hidden');
         showingAnswer = false;
+        answerChecked = false;
 
         updateProgress();
     }
@@ -376,6 +510,9 @@
         // Show answer button
         showAnswerBtn.addEventListener('click', showAnswer);
 
+        // Check answer button (for type-in cards)
+        checkAnswerBtn.addEventListener('click', checkTypeinAnswer);
+
         // Rating buttons
         document.querySelectorAll('.rating-btn').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -391,17 +528,33 @@
             });
         });
 
+        // Handle Enter key in type-in input
+        typeinInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !answerChecked) {
+                e.preventDefault();
+                checkTypeinAnswer();
+            }
+        });
+
         // Keyboard shortcuts - use window and capture phase
         window.addEventListener('keydown', (e) => {
-            // Ignore if typing in an input
+            // Allow typing in type-in input
+            if (e.target === typeinInput) return;
+
+            // Ignore if typing in other inputs
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
             // Ignore if session is complete
             if (currentIndex >= cards.length) return;
 
+            const card = cards[currentIndex];
+
             if ((e.code === 'Space' || e.key === ' ') && !showingAnswer) {
                 e.preventDefault();
-                showAnswer();
+                // For type-in cards, space does nothing (must type answer)
+                if (!isTypeinCard(card)) {
+                    showAnswer();
+                }
             } else if (showingAnswer) {
                 // Handle both regular number keys and numpad
                 const keyMap = {

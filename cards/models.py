@@ -42,6 +42,7 @@ class Card(models.Model):
         BASIC = 'basic', 'Basic (Front/Back)'
         CLOZE = 'cloze', 'Cloze Deletion'
         REVERSE = 'reverse', 'Basic + Reverse'
+        TYPEIN = 'typein', 'Type-In Answer'
 
     deck = models.ForeignKey(Deck, on_delete=models.CASCADE, related_name='cards')
     card_type = models.CharField(

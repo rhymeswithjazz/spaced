@@ -74,6 +74,10 @@ CommandExecutionLog (command_name, status, started_at, finished_at, users_proces
   - Multiple cloze deletions supported (c1, c2, c3, etc.)
   - Each cloze number becomes a separate review item
   - Parsed and rendered by `cards/cloze.py` (pure functions)
+- **Type-In**: User types their answer which is checked against expected answer
+  - Case-insensitive comparison (trimmed whitespace)
+  - Shows correct/incorrect feedback before rating
+  - Forces active recall through typing rather than recognition
 - **Reverse**: Creates both front→back and back→front cards
 
 ### Theme System
@@ -275,6 +279,19 @@ The Docker container includes **supercronic** which automatically runs email com
 No external cron setup required - scheduler runs inside the container via supervisor.
 
 ## Recent Major Changes
+
+### 2025-12-07 - Type-In Card Type
+- **What**: Added new card type where users type their answer instead of just flipping
+- **Why**: Forces active recall through typing, which research shows significantly improves retention
+- **Impact**: Users can now create cards that require typing the answer before seeing if they're correct
+- **Changes**:
+  - **Model**: Added `TYPEIN = 'typein'` to CardType choices
+  - **Review UI**: Type-in cards show input field + "Check Answer" button instead of "Show Answer"
+  - **Answer Comparison**: Case-insensitive, trimmed whitespace matching
+  - **Feedback**: Shows ✓ Correct (green) or ✗ Incorrect (red) with expected answer
+  - **Keyboard**: Enter submits answer, then 1-4 to rate
+  - **Form Help Text**: Updated to describe all card types
+- **Migration**: Run `python manage.py migrate` for new card type choice
 
 ### 2025-12-07 - Toast Notifications with Alpine.js
 - **What**: Replaced static message banners with animated toast notifications
