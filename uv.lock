@@ -276,6 +276,7 @@ dependencies = [
     { name = "django-environ" },
     { name = "gunicorn" },
     { name = "pillow" },
+    { name = "tzdata" },
     { name = "whitenoise" },
 ]
 
@@ -291,6 +292,7 @@ requires-dist = [
     { name = "django-environ", specifier = ">=0.12.0" },
     { name = "gunicorn", specifier = ">=23.0.0" },
     { name = "pillow", specifier = ">=12.0.0" },
+    { name = "tzdata", specifier = ">=2025.2" },
     { name = "whitenoise", specifier = ">=6.11.0" },
 ]
 
