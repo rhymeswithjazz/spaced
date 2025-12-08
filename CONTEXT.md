@@ -25,6 +25,7 @@ A self-hosted spaced repetition flashcard application built with Django. Designe
 - **Framework**: Django 5.2
 - **Database**: SQLite3
 - **CSS**: TailwindCSS (via CDN)
+- **JavaScript**: Alpine.js (via CDN) - toast notifications, reactive components
 - **Package Manager**: uv
 - **WSGI Server**: Gunicorn
 - **Containerization**: Docker
@@ -274,6 +275,20 @@ The Docker container includes **supercronic** which automatically runs email com
 No external cron setup required - scheduler runs inside the container via supervisor.
 
 ## Recent Major Changes
+
+### 2025-12-07 - Toast Notifications with Alpine.js
+- **What**: Replaced static message banners with animated toast notifications
+- **Why**: Better UX - toasts are less intrusive and auto-dismiss
+- **Impact**: All Django messages now display as toasts; JavaScript can trigger toasts dynamically
+- **Changes**:
+  - **Alpine.js**: Added via CDN (~15KB) for reactive toast component
+  - **Toast Component**: Fixed bottom-right position, stacks upward, auto-dismisses after 4 seconds
+  - **Toast Types**: Success (green), error (red), info (blue), warning (yellow) with icons
+  - **Django Integration**: Messages trigger toasts on page load via `showToast()` function
+  - **JavaScript API**: Global `showToast(type, message)` function for dynamic toasts
+  - **Review Session**: Errors now show as toasts instead of browser alerts
+  - **Achievement Fix**: Changed `get_or_create` to `filter().first()` to handle duplicate EmailLog records
+- **Usage**: `showToast('success', 'Card saved!')` from any JavaScript
 
 ### 2025-12-07 - Achievement Email Deduplication Fix & Dashboard Stats
 - **What**: Fixed race condition causing duplicate achievement emails; added total reviews to statistics
