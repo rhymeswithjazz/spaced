@@ -19,6 +19,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -334,6 +335,75 @@
             window.dispatchEvent(new CustomEvent('show-toast', {
                 detail: { type, message }
             }));
+        }
+
+        // Global showConfetti function for celebration animations
+        function showConfetti(type = 'basic') {
+            if (typeof confetti !== 'function') return;
+
+            if (type === 'session_complete') {
+                // Burst from both sides for session completion
+                const count = 200;
+                const defaults = { origin: { y: 0.7 }, disableForReducedMotion: true };
+
+                function fire(particleRatio, opts) {
+                    confetti({
+                        ...defaults,
+                        ...opts,
+                        particleCount: Math.floor(count * particleRatio)
+                    });
+                }
+
+                fire(0.25, { spread: 26, startVelocity: 55, origin: { x: 0.2 } });
+                fire(0.2, { spread: 60, origin: { x: 0.2 } });
+                fire(0.35, { spread: 100, decay: 0.91, scalar: 0.8, origin: { x: 0.2 } });
+                fire(0.1, { spread: 120, startVelocity: 25, decay: 0.92, scalar: 1.2, origin: { x: 0.2 } });
+                fire(0.1, { spread: 120, startVelocity: 45, origin: { x: 0.2 } });
+
+                fire(0.25, { spread: 26, startVelocity: 55, origin: { x: 0.8 } });
+                fire(0.2, { spread: 60, origin: { x: 0.8 } });
+                fire(0.35, { spread: 100, decay: 0.91, scalar: 0.8, origin: { x: 0.8 } });
+                fire(0.1, { spread: 120, startVelocity: 25, decay: 0.92, scalar: 1.2, origin: { x: 0.8 } });
+                fire(0.1, { spread: 120, startVelocity: 45, origin: { x: 0.8 } });
+            } else if (type === 'achievement') {
+                // Star-shaped confetti for achievements
+                const defaults = {
+                    spread: 360,
+                    ticks: 100,
+                    gravity: 0,
+                    decay: 0.94,
+                    startVelocity: 30,
+                    colors: ['#FFD700', '#FFA500', '#FF6347', '#87CEEB', '#98FB98'],
+                    disableForReducedMotion: true
+                };
+
+                function shoot() {
+                    confetti({
+                        ...defaults,
+                        particleCount: 40,
+                        scalar: 1.2,
+                        shapes: ['star']
+                    });
+                    confetti({
+                        ...defaults,
+                        particleCount: 20,
+                        scalar: 0.75,
+                        shapes: ['circle']
+                    });
+                }
+
+                setTimeout(shoot, 0);
+                setTimeout(shoot, 100);
+                setTimeout(shoot, 200);
+            } else {
+                // Basic confetti burst
+                confetti({
+                    particleCount: 100,
+                    spread: 70,
+                    origin: { y: 0.6 },
+                    disableForReducedMotion: true
+                });
+            }
         }
     </script>
 

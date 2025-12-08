@@ -258,6 +258,7 @@
     // Card data from server
     const cards = {{ cards_json|safe }};
     const defaultTextSize = '{{ text_size }}';
+    const celebrationAnimations = {{ celebration_animations|yesno:"true,false" }};
 
     // State
     let currentIndex = 0;
@@ -448,6 +449,17 @@
         showingAnswer = true;
     }
 
+    // Achievement display names
+    const achievementNames = {
+        'first_review': 'First Step',
+        'reviews_100': '100 Cards Reviewed',
+        'reviews_500': '500 Cards Reviewed',
+        'reviews_1000': '1,000 Cards Reviewed',
+        'streak_7': '7-Day Streak',
+        'streak_30': '30-Day Streak',
+        'streak_100': '100-Day Streak'
+    };
+
     async function submitRating(quality) {
         const card = cards[currentIndex];
 
@@ -462,6 +474,17 @@
             });
 
             if (!response.ok) throw new Error('Review failed');
+
+            const data = await response.json();
+
+            // Check for achievements
+            if (data.achievements && data.achievements.length > 0 && celebrationAnimations) {
+                data.achievements.forEach(key => {
+                    const name = achievementNames[key] || key;
+                    showToast('success', `Achievement unlocked: ${name}!`);
+                    showConfetti('achievement');
+                });
+            }
 
             // Update stats
             stats.reviewed++;
@@ -497,6 +520,11 @@
         progressBar.style.width = '100%';
         progressText.textContent = `${cards.length} / ${cards.length}`;
         progressTextDesktop.textContent = `${cards.length} / ${cards.length}`;
+
+        // Celebration animation on session complete
+        if (celebrationAnimations && stats.reviewed > 0) {
+            showConfetti('session_complete');
+        }
     }
 
     function updateProgress() {

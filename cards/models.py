@@ -188,6 +188,7 @@ class UserPreferences(models.Model):
         default=TextSize.LARGE
     )
     cards_per_session = models.IntegerField(default=20)
+    celebration_animations = models.BooleanField(default=True)
 
     # Email notification preferences
     email_study_reminders = models.BooleanField(default=True)

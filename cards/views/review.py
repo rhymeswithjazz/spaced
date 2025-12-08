@@ -91,6 +91,7 @@ def review_session(request, deck_pk=None):
         'deck': deck,
         'total_due': len(cards_data),  # Use expanded count for cloze cards
         'text_size': preferences.card_text_size,
+        'celebration_animations': preferences.celebration_animations,
     }
     return render(request, 'cards/review_session.html', context)
 
@@ -149,6 +150,7 @@ def review_struggling(request):
         'deck': None,
         'total_due': len(cards_data),
         'text_size': preferences.card_text_size,
+        'celebration_animations': preferences.celebration_animations,
         'session_type': 'struggling',
     }
     return render(request, 'cards/review_session.html', context)
@@ -176,11 +178,12 @@ def review_card(request, pk):
     prefs.update_streak()
 
     # Check for achievements (sends emails asynchronously-safe)
-    check_and_send_achievements(request.user)
+    awarded_achievements = check_and_send_achievements(request.user)
 
     return JsonResponse({
         'success': True,
         'next_review': card.next_review.isoformat(),
         'interval': card.interval,
         'ease_factor': round(card.ease_factor, 2),
+        'achievements': awarded_achievements,
     })

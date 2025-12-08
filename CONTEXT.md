@@ -163,6 +163,37 @@ flashcard/
 
 ## Development
 
+### JavaScript/CSS Architecture
+
+**Current State**: JavaScript and CSS are inline in templates (base.html, review_session.html).
+
+**When to split into separate files**:
+1. A single template's `<script>` block exceeds ~150-200 lines
+2. 3+ pages use the same utility functions
+3. Build tooling (bundling, minification, TypeScript) is needed
+
+**Current inline assets**:
+- `base.html`: ~100 lines JS (toast manager, theme toggle, confetti) - approaching threshold
+- `review_session.html`: ~300 lines JS (review logic) - could benefit from splitting
+- Custom CSS: ~100 lines (cloze styles, card text sizes, animations)
+
+**Recommended future structure** (when splitting):
+```
+static/
+├── js/
+│   ├── utils.js          # showToast, showConfetti (global utilities)
+│   ├── theme.js          # theme toggle logic
+│   └── review-session.js # review session logic
+├── css/
+│   └── components.css    # cloze styles, card text sizes, typein styles
+```
+
+**Benefits of splitting**:
+- Browser caching (static files cached, inline re-downloaded every page)
+- Easier testing with ESLint/Jest
+- Better separation of concerns
+- Reduced template complexity
+
 ### Local Setup
 
 ```bash
@@ -279,6 +310,21 @@ The Docker container includes **supercronic** which automatically runs email com
 No external cron setup required - scheduler runs inside the container via supervisor.
 
 ## Recent Major Changes
+
+### 2025-12-07 - Celebration Animations (Confetti)
+- **What**: Added confetti animations for session completion and achievement milestones
+- **Why**: Positive reinforcement through visual celebration improves motivation and engagement
+- **Impact**: Users see celebratory confetti when completing review sessions and unlocking achievements
+- **Changes**:
+  - **New preference**: `celebration_animations` boolean field in UserPreferences (default: True)
+  - **Settings toggle**: Added checkbox in Study Preferences section to enable/disable animations
+  - **canvas-confetti library**: Added via CDN (~6KB) for lightweight confetti effects
+  - **Session completion**: Burst confetti from both sides of screen when review session completes
+  - **Achievement unlock**: Star-shaped confetti + toast notification when milestones are reached
+  - **API enhancement**: `review_card` endpoint now returns `achievements` array of newly awarded achievement keys
+  - **Accessibility**: Confetti respects `prefers-reduced-motion` via `disableForReducedMotion: true`
+- **Global function**: `showConfetti(type)` - types: 'basic', 'session_complete', 'achievement'
+- **Migration**: Run `python manage.py migrate` for new preference field
 
 ### 2025-12-07 - Type-In Card Type
 - **What**: Added new card type where users type their answer instead of just flipping

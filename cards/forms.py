@@ -106,6 +106,7 @@ class UserPreferencesForm(StyledFormMixin, forms.ModelForm):
         model = UserPreferences
         fields = [
             'theme', 'card_text_size', 'cards_per_session',
+            'celebration_animations',
             'email_study_reminders', 'email_streak_reminders',
             'email_weekly_stats', 'email_inactivity_nudge',
             'email_achievement_notifications', 'email_unsubscribed',
