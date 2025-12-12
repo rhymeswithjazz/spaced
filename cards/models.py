@@ -216,7 +216,14 @@ class UserPreferences(models.Model):
         choices=TextSize.choices,
         default=TextSize.LARGE
     )
-    cards_per_session = models.IntegerField(default=20)
+    new_cards_per_day = models.IntegerField(
+        default=20,
+        help_text='Maximum number of new cards to introduce per session'
+    )
+    max_reviews_per_session = models.IntegerField(
+        default=0,
+        help_text='Maximum review cards per session (0 = unlimited)'
+    )
     celebration_animations = models.BooleanField(default=True)
     user_timezone = models.CharField(
         max_length=50,

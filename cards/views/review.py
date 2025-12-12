@@ -31,22 +31,25 @@ def review_session(request, deck_pk=None):
         deck = None
         deck_filter = {'deck__owner': user}
 
-    # Prioritize due cards (already reviewed) over new cards
+    # Anki-like behavior: prioritize ALL due cards, then add limited new cards
     # Due cards: reviewed before, scheduled for now or earlier
-    due_cards = list(Card.objects.filter(
+    due_cards_query = Card.objects.filter(
         **deck_filter,
         next_review__lte=now,
         has_been_reviewed=True
-    ).select_related('deck')[:preferences.cards_per_session])
+    ).select_related('deck')
 
-    # Fill remaining slots with new cards
-    remaining_slots = preferences.cards_per_session - len(due_cards)
-    new_cards = []
-    if remaining_slots > 0:
-        new_cards = list(Card.objects.filter(
-            **deck_filter,
-            has_been_reviewed=False
-        ).select_related('deck')[:remaining_slots])
+    # Apply max reviews limit if set (0 = unlimited)
+    if preferences.max_reviews_per_session > 0:
+        due_cards = list(due_cards_query[:preferences.max_reviews_per_session])
+    else:
+        due_cards = list(due_cards_query)
+
+    # Add new cards up to the daily limit
+    new_cards = list(Card.objects.filter(
+        **deck_filter,
+        has_been_reviewed=False
+    ).select_related('deck')[:preferences.new_cards_per_day])
 
     cards = due_cards + new_cards
 
@@ -103,11 +106,17 @@ def review_struggling(request):
     preferences = get_or_create_preferences(user)
 
     # Struggling cards: low ease factor and have been reviewed at least once
-    struggling_cards = list(Card.objects.filter(
+    struggling_query = Card.objects.filter(
         deck__owner=user,
         ease_factor__lt=2.0,
         has_been_reviewed=True
-    ).select_related('deck')[:preferences.cards_per_session])
+    ).select_related('deck')
+
+    # Apply max reviews limit if set (0 = unlimited)
+    if preferences.max_reviews_per_session > 0:
+        struggling_cards = list(struggling_query[:preferences.max_reviews_per_session])
+    else:
+        struggling_cards = list(struggling_query)
 
     if not struggling_cards:
         messages.info(request, 'No struggling cards to review!')

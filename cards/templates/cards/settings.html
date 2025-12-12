@@ -52,14 +52,26 @@
                     </div>
 
                     <div>
-                        <label for="id_cards_per_session" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Cards per session
+                        <label for="id_new_cards_per_day" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            New cards per session
                         </label>
                         <div class="mt-1">
-                            {{ pref_form.cards_per_session }}
+                            {{ pref_form.new_cards_per_day }}
                         </div>
                         <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                            Maximum number of cards to review in a single session.
+                            Maximum number of new (unseen) cards to introduce per session.
+                        </p>
+                    </div>
+
+                    <div>
+                        <label for="id_max_reviews_per_session" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Max reviews per session
+                        </label>
+                        <div class="mt-1">
+                            {{ pref_form.max_reviews_per_session }}
+                        </div>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                            Maximum number of due cards to review per session. Set to 0 for unlimited.
                         </p>
                     </div>
 

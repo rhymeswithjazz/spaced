@@ -36,3 +36,9 @@ data/
 # Coverage reports
 .coverage
 htmlcov/
+
+# AI assistants
+.claude/
+.serena/
+CLAUDE.md
+CONTEXT.md

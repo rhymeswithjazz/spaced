@@ -105,7 +105,7 @@ class UserPreferencesForm(StyledFormMixin, forms.ModelForm):
     class Meta:
         model = UserPreferences
         fields = [
-            'theme', 'card_text_size', 'cards_per_session',
+            'theme', 'card_text_size', 'new_cards_per_day', 'max_reviews_per_session',
             'celebration_animations', 'user_timezone',
             'email_study_reminders', 'email_streak_reminders',
             'email_weekly_stats', 'email_inactivity_nudge',

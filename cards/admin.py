@@ -49,5 +49,5 @@ class ReviewReminderAdmin(admin.ModelAdmin):
 
 @admin.register(UserPreferences)
 class UserPreferencesAdmin(admin.ModelAdmin):
-    list_display = ['user', 'theme', 'cards_per_session', 'updated_at']
+    list_display = ['user', 'theme', 'new_cards_per_day', 'max_reviews_per_session', 'updated_at']
     list_filter = ['theme']
