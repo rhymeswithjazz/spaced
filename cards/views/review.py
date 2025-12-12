@@ -104,19 +104,14 @@ def review_struggling(request):
     """Start a review session for struggling cards (low ease factor)."""
     user = request.user
     preferences = get_or_create_preferences(user)
+    target_session_size = 20
 
     # Struggling cards: low ease factor and have been reviewed at least once
-    struggling_query = Card.objects.filter(
+    struggling_cards = list(Card.objects.filter(
         deck__owner=user,
         ease_factor__lt=2.0,
         has_been_reviewed=True
-    ).select_related('deck')
-
-    # Apply max reviews limit if set (0 = unlimited)
-    if preferences.max_reviews_per_session > 0:
-        struggling_cards = list(struggling_query[:preferences.max_reviews_per_session])
-    else:
-        struggling_cards = list(struggling_query)
+    ).select_related('deck'))
 
     if not struggling_cards:
         messages.info(request, 'No struggling cards to review!')
@@ -148,8 +143,20 @@ def review_struggling(request):
                 'active_cloze': None,
             })
 
-    # Shuffle cards for variety
+    # Shuffle first, then adjust to target session size
     random.shuffle(cards_data)
+
+    # If more than target, trim to target size
+    # If fewer than target, repeat cards to fill the session
+    if len(cards_data) > target_session_size:
+        cards_data = cards_data[:target_session_size]
+    elif len(cards_data) < target_session_size:
+        # Repeat cards cyclically until we reach target size
+        original_cards = cards_data.copy()
+        while len(cards_data) < target_session_size:
+            cards_data.append(original_cards[len(cards_data) % len(original_cards)])
+        # Shuffle again so repeated cards aren't in predictable order
+        random.shuffle(cards_data)
 
     cards_json = json.dumps(cards_data)
 
