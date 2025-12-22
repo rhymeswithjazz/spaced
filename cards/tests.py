@@ -2063,7 +2063,7 @@ class SendRemindersCommandTests(TestCase):
         cmd = Command()
 
         # One card is already due from setUp
-        self.assertEqual(cmd._get_due_cards_count(self.user), 1)
+        self.assertEqual(cmd._get_due_cards_count(self.user, self.prefs), 1)
 
         # Add another due card
         Card.objects.create(
@@ -2073,7 +2073,7 @@ class SendRemindersCommandTests(TestCase):
             repetitions=1,
             has_been_reviewed=True
         )
-        self.assertEqual(cmd._get_due_cards_count(self.user), 2)
+        self.assertEqual(cmd._get_due_cards_count(self.user, self.prefs), 2)
 
         # Add a not-due card (shouldn't be counted)
         Card.objects.create(
@@ -2083,7 +2083,7 @@ class SendRemindersCommandTests(TestCase):
             repetitions=1,
             has_been_reviewed=True
         )
-        self.assertEqual(cmd._get_due_cards_count(self.user), 2)
+        self.assertEqual(cmd._get_due_cards_count(self.user, self.prefs), 2)
 
     def test_get_due_cards_count_other_user(self):
         """Should only count cards belonging to the specified user."""
@@ -2103,7 +2103,86 @@ class SendRemindersCommandTests(TestCase):
         )
 
         # Should still only see 1 card for original user
-        self.assertEqual(cmd._get_due_cards_count(self.user), 1)
+        self.assertEqual(cmd._get_due_cards_count(self.user, self.prefs), 1)
+
+    def test_get_due_cards_count_includes_new_cards(self):
+        """Should count new cards up to new_cards_per_day limit."""
+        from cards.management.commands.send_reminders import Command
+        cmd = Command()
+
+        # Set up: 1 due card from setUp
+        # Add 5 new cards (never reviewed)
+        for i in range(5):
+            Card.objects.create(
+                deck=self.deck,
+                front=f'New Q{i}',
+                has_been_reviewed=False
+            )
+
+        # Should count 1 due + 5 new = 6
+        self.assertEqual(cmd._get_due_cards_count(self.user, self.prefs), 6)
+
+        # Add more new cards than the limit
+        for i in range(25):
+            Card.objects.create(
+                deck=self.deck,
+                front=f'Extra New Q{i}',
+                has_been_reviewed=False
+            )
+
+        # Should be limited to 1 due + 20 new (default limit) = 21
+        self.assertEqual(cmd._get_due_cards_count(self.user, self.prefs), 21)
+
+    def test_get_due_cards_count_respects_new_cards_limit(self):
+        """Should respect user's new_cards_per_day preference."""
+        from cards.management.commands.send_reminders import Command
+        cmd = Command()
+
+        # Set a custom new cards limit
+        self.prefs.new_cards_per_day = 5
+        self.prefs.save()
+
+        # Add 10 new cards
+        for i in range(10):
+            Card.objects.create(
+                deck=self.deck,
+                front=f'New Q{i}',
+                has_been_reviewed=False
+            )
+
+        # Should be limited to 1 due + 5 new = 6
+        self.assertEqual(cmd._get_due_cards_count(self.user, self.prefs), 6)
+
+    def test_get_due_cards_count_expands_cloze_cards(self):
+        """Should count each cloze number separately."""
+        from cards.management.commands.send_reminders import Command
+        cmd = Command()
+
+        # Remove the existing due card to simplify
+        Card.objects.filter(deck=self.deck).delete()
+
+        # Add a cloze card with 3 cloze deletions
+        Card.objects.create(
+            deck=self.deck,
+            front='{{c1::one}} and {{c2::two}} and {{c3::three}}',
+            card_type=Card.CardType.CLOZE,
+            next_review=timezone.now() - timedelta(hours=1),
+            has_been_reviewed=True
+        )
+
+        # Should count as 3 (one for each cloze number)
+        self.assertEqual(cmd._get_due_cards_count(self.user, self.prefs), 3)
+
+        # Add another cloze card with 2 cloze deletions as a new card
+        Card.objects.create(
+            deck=self.deck,
+            front='{{c1::first}} and {{c2::second}}',
+            card_type=Card.CardType.CLOZE,
+            has_been_reviewed=False
+        )
+
+        # Should count as 3 + 2 = 5
+        self.assertEqual(cmd._get_due_cards_count(self.user, self.prefs), 5)
 
     @patch('cards.management.commands.send_reminders.send_branded_email')
     def test_send_reminder_email(self, mock_send_email):

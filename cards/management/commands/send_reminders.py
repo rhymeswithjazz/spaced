@@ -20,6 +20,7 @@ from django.utils import timezone
 
 from cards.models import ReviewReminder, Card, EmailLog, CommandExecutionLog, UserPreferences
 from cards.email import send_branded_email, can_send_email
+from cards import cloze
 
 logger = logging.getLogger(__name__)
 
@@ -129,7 +130,7 @@ class Command(BaseCommand):
                     skipped_reasons['already_sent_today'] += 1
                     continue
 
-                due_count = self._get_due_cards_count(user)
+                due_count = self._get_due_cards_count(user, prefs)
 
                 if due_count == 0:
                     logger.info(f"Skipping {user.username}: no cards due")
@@ -287,13 +288,48 @@ class Command(BaseCommand):
 
         return diff <= time_window_minutes
 
-    def _get_due_cards_count(self, user):
-        """Count cards due for review for a user (excludes new cards)."""
-        return Card.objects.filter(
+    def _get_due_cards_count(self, user, prefs):
+        """
+        Count cards for review matching the review session logic.
+
+        This includes:
+        - Due cards (reviewed before, scheduled for now)
+        - New cards (up to new_cards_per_day limit)
+        - Cloze card expansion (each cloze number counts separately)
+        """
+        now = timezone.now()
+
+        # Due cards: reviewed before, scheduled for now or earlier
+        due_cards_query = Card.objects.filter(
             deck__owner=user,
-            next_review__lte=timezone.now(),
-            has_been_reviewed=True  # Exclude new cards (never reviewed)
-        ).count()
+            next_review__lte=now,
+            has_been_reviewed=True
+        )
+
+        # Apply max reviews limit if set (0 = unlimited)
+        if prefs.max_reviews_per_session > 0:
+            due_cards = list(due_cards_query[:prefs.max_reviews_per_session])
+        else:
+            due_cards = list(due_cards_query)
+
+        # Add new cards up to the daily limit
+        new_cards = list(Card.objects.filter(
+            deck__owner=user,
+            has_been_reviewed=False
+        )[:prefs.new_cards_per_day])
+
+        cards = due_cards + new_cards
+
+        # Count with cloze expansion (each cloze number is a separate review)
+        count = 0
+        for card in cards:
+            if card.card_type == Card.CardType.CLOZE:
+                cloze_numbers = cloze.get_cloze_numbers(card.front)
+                count += len(cloze_numbers) if cloze_numbers else 1
+            else:
+                count += 1
+
+        return count
 
     def _send_reminder_email(self, user, due_count):
         """Send the reminder email using branded template."""
