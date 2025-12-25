@@ -35,17 +35,17 @@ RUN uv sync --frozen --no-dev
 # Copy project files
 COPY . .
 
-# Create data and logs directories and set permissions
-RUN mkdir -p /app/data /app/logs && \
-    chmod -R 777 /app/data /app/logs && \
-    chmod -R 755 /app
+# Create data and logs directories
+RUN mkdir -p /app/data /app/logs
 
 # Collect static files
-RUN uv run python manage.py collectstatic --noinput && \
-    chmod -R 755 /app/staticfiles
+RUN uv run python manage.py collectstatic --noinput
 
-# Make entrypoint executable
-RUN chmod +x /app/entrypoint.sh
+# Make entrypoint executable and set permissions for non-root user
+# This ensures the container can run as any user (e.g., user: "1026:100" in Portainer)
+RUN chmod +x /app/entrypoint.sh && \
+    chmod -R 755 /app && \
+    chmod -R 777 /app/data /app/logs /app/.venv
 
 # Expose port
 EXPOSE 8000
