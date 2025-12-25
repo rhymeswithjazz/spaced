@@ -37,3 +37,9 @@ updates:
       day: "monday"
     commit-message:
       prefix: "chore(deps)"
+    ignore:
+      # Only allow patch updates for Python base image (e.g., 3.11.x)
+      # Major/minor bumps (e.g., 3.11 -> 3.12) should be done manually
+      # to avoid pre-release versions like 3.14-alpha
+      - dependency-name: "python"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
