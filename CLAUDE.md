@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+# Architecture
+
+Read ARCHITECTURE.md to get an understanding of the project's architecture.
+
 ## Commands
 
 ```bash
