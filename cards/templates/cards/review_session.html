@@ -9,6 +9,20 @@
 
 {% block content %}
 <div id="review-app" class="max-w-3xl mx-auto">
+    {% if practice_mode %}
+    <!-- Practice Mode Banner -->
+    <div class="mb-4 p-3 bg-cyan-50 dark:bg-cyan-900/30 border border-cyan-200 dark:border-cyan-800 rounded-lg">
+        <div class="flex items-center">
+            <svg class="w-5 h-5 text-cyan-600 dark:text-cyan-400 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+            </svg>
+            <p class="text-sm text-cyan-700 dark:text-cyan-300">
+                <span class="font-medium">Practice Mode</span> - Reviewing early to maintain your streak. Your SRS schedule won't change.
+            </p>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Progress Bar & Controls -->
     <div class="mb-6">
         <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
@@ -115,7 +129,9 @@
             </svg>
         </div>
         <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Session Complete!</h2>
-        {% if session_type == 'struggling' %}
+        {% if practice_mode %}
+        <p class="text-gray-600 dark:text-gray-400 mb-6">Great practice session! Your streak continues and your SRS schedule is unchanged.</p>
+        {% elif session_type == 'struggling' %}
         <p class="text-gray-600 dark:text-gray-400 mb-6">Great job! You've reviewed your cards that need work. Keep practicing to improve retention.</p>
         {% else %}
         <p class="text-gray-600 dark:text-gray-400 mb-6">Great job! You've reviewed all due cards.</p>
@@ -165,7 +181,8 @@
         cards: {{ cards_json|safe }},
         defaultTextSize: '{{ text_size }}',
         celebrationAnimations: {{ celebration_animations|yesno:"true,false" }},
-        csrfToken: '{{ csrf_token }}'
+        csrfToken: '{{ csrf_token }}',
+        practiceMode: {{ practice_mode|default:"false"|yesno:"true,false" }}
     });
 </script>
 {% endblock %}

@@ -21,7 +21,7 @@ from .deck import (
     deck_reset,
 )
 from .card import CardCreateView, CardUpdateView, CardDeleteView
-from .review import review_session, review_struggling, review_card
+from .review import review_session, review_struggling, review_card, practice_session, practice_card
 from .settings import settings_view, api_set_theme, api_get_theme
 from .email import unsubscribe, unsubscribe_type, manage_preferences, preview_email
 from .health import health_check
@@ -55,6 +55,8 @@ __all__ = [
     'review_session',
     'review_struggling',
     'review_card',
+    'practice_session',
+    'practice_card',
     # Settings
     'settings_view',
     'api_set_theme',

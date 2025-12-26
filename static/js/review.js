@@ -5,7 +5,7 @@
 
 // Review session initialization
 function initReviewSession(config) {
-    const { cards, defaultTextSize, celebrationAnimations, csrfToken } = config;
+    const { cards, defaultTextSize, celebrationAnimations, csrfToken, practiceMode = false } = config;
 
     // State
     let currentIndex = 0;
@@ -184,8 +184,13 @@ function initReviewSession(config) {
     async function submitRating(quality) {
         const card = cards[currentIndex];
 
+        // Use different API endpoint for practice mode
+        const apiUrl = practiceMode 
+            ? `/api/practice/${card.id}/` 
+            : `/api/review/${card.id}/`;
+
         try {
-            const response = await fetch(`/api/review/${card.id}/`, {
+            const response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -198,8 +203,8 @@ function initReviewSession(config) {
 
             const data = await response.json();
 
-            // Check for achievements
-            if (data.achievements && data.achievements.length > 0 && celebrationAnimations) {
+            // Check for achievements (only in regular review mode)
+            if (!practiceMode && data.achievements && data.achievements.length > 0 && celebrationAnimations) {
                 data.achievements.forEach(key => {
                     const name = achievementNames[key] || key;
                     showToast('success', `Achievement unlocked: ${name}!`);

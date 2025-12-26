@@ -42,6 +42,19 @@ def dashboard(request):
     total_due = user_cards.filter(next_review__lte=now, has_been_reviewed=True).count()
     # New = cards that have never been reviewed
     total_new = user_cards.filter(has_been_reviewed=False).count()
+    
+    # Practice mode: cards available for early review (reviewed but not yet due)
+    practice_available = user_cards.filter(
+        next_review__gt=now,
+        has_been_reviewed=True
+    ).count()
+    
+    # Get next review time for "next review in X" display
+    next_review_card = user_cards.filter(
+        next_review__gt=now,
+        has_been_reviewed=True
+    ).order_by('next_review').first()
+    next_review_time = next_review_card.next_review if next_review_card else None
 
     # === PROGRESS STATS ===
     # Card status: New (never reviewed), Learning (interval < 21), Mature (interval >= 21)
@@ -155,6 +168,9 @@ def dashboard(request):
         'total_due': total_due,
         'total_new': total_new,
         'streak': streak,
+        # Practice mode
+        'practice_available': practice_available,
+        'next_review_time': next_review_time,
         # Progress
         'cards_new': cards_new,
         'cards_learning': cards_learning,

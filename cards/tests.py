@@ -2438,3 +2438,316 @@ class EmailVerificationViewTests(TestCase):
         })
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Please enter a correct username')
+
+
+# =============================================================================
+# Practice Mode Tests
+# =============================================================================
+
+
+class PracticeModeTests(TestCase):
+    """Tests for the practice mode feature."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123'
+        )
+        self.client.login(username='testuser', password='testpass123')
+        self.deck = Deck.objects.create(name='Test Deck', owner=self.user)
+
+        # Create user preferences
+        from .models import UserPreferences
+        self.prefs, _ = UserPreferences.objects.get_or_create(user=self.user)
+
+    def test_practice_session_shows_non_due_cards(self):
+        """Practice session should show cards that aren't due yet."""
+        # Create a card that's not due (next_review is in the future)
+        future_card = Card.objects.create(
+            deck=self.deck,
+            front='Future Q',
+            back='Future A',
+            next_review=timezone.now() + timedelta(days=1),
+            has_been_reviewed=True,
+            repetitions=1
+        )
+
+        response = self.client.get(reverse('practice_session'))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('practice_mode', response.context)
+        self.assertTrue(response.context['practice_mode'])
+
+    def test_practice_session_redirects_when_no_cards(self):
+        """Practice session should redirect when no cards are available."""
+        response = self.client.get(reverse('practice_session'))
+        self.assertRedirects(response, reverse('dashboard'))
+
+    def test_practice_session_excludes_due_cards(self):
+        """Practice session should not include cards that are due now."""
+        # Create a due card
+        due_card = Card.objects.create(
+            deck=self.deck,
+            front='Due Q',
+            back='Due A',
+            next_review=timezone.now() - timedelta(hours=1),
+            has_been_reviewed=True,
+            repetitions=1
+        )
+
+        response = self.client.get(reverse('practice_session'))
+        # Should redirect since there are no non-due cards
+        self.assertRedirects(response, reverse('dashboard'))
+
+    def test_practice_session_excludes_new_cards(self):
+        """Practice session should not include new cards (never reviewed)."""
+        # Create a new card
+        new_card = Card.objects.create(
+            deck=self.deck,
+            front='New Q',
+            back='New A',
+            has_been_reviewed=False
+        )
+
+        response = self.client.get(reverse('practice_session'))
+        # Should redirect since there are no practice-eligible cards
+        self.assertRedirects(response, reverse('dashboard'))
+
+    def test_practice_card_does_not_update_srs(self):
+        """Practice review should not update card SRS scheduling."""
+        # Create a card that's not due
+        card = Card.objects.create(
+            deck=self.deck,
+            front='Test Q',
+            back='Test A',
+            next_review=timezone.now() + timedelta(days=5),
+            has_been_reviewed=True,
+            repetitions=3,
+            interval=10,
+            ease_factor=2.5
+        )
+
+        original_next_review = card.next_review
+        original_interval = card.interval
+        original_ease = card.ease_factor
+        original_repetitions = card.repetitions
+
+        # Submit a practice review
+        response = self.client.post(
+            reverse('practice_card', args=[card.pk]),
+            data={'quality': 5},
+            content_type='application/json'
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        # Reload card from database
+        card.refresh_from_db()
+
+        # Card scheduling should be unchanged
+        self.assertEqual(card.next_review, original_next_review)
+        self.assertEqual(card.interval, original_interval)
+        self.assertEqual(card.ease_factor, original_ease)
+        self.assertEqual(card.repetitions, original_repetitions)
+
+    def test_practice_card_does_not_create_review_log(self):
+        """Practice review should not create a ReviewLog entry."""
+        card = Card.objects.create(
+            deck=self.deck,
+            front='Test Q',
+            back='Test A',
+            next_review=timezone.now() + timedelta(days=5),
+            has_been_reviewed=True,
+            repetitions=3
+        )
+
+        initial_log_count = ReviewLog.objects.count()
+
+        response = self.client.post(
+            reverse('practice_card', args=[card.pk]),
+            data={'quality': 4},
+            content_type='application/json'
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(ReviewLog.objects.count(), initial_log_count)
+
+    def test_practice_card_updates_streak(self):
+        """Practice review should update user's streak."""
+        card = Card.objects.create(
+            deck=self.deck,
+            front='Test Q',
+            back='Test A',
+            next_review=timezone.now() + timedelta(days=5),
+            has_been_reviewed=True,
+            repetitions=3
+        )
+
+        # Reset streak
+        self.prefs.current_streak = 0
+        self.prefs.last_study_date = None
+        self.prefs.save()
+
+        response = self.client.post(
+            reverse('practice_card', args=[card.pk]),
+            data={'quality': 4},
+            content_type='application/json'
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        # Refresh preferences
+        self.prefs.refresh_from_db()
+
+        # Streak should be updated
+        self.assertEqual(self.prefs.current_streak, 1)
+
+    def test_practice_card_returns_correct_response(self):
+        """Practice card endpoint should return appropriate response."""
+        card = Card.objects.create(
+            deck=self.deck,
+            front='Test Q',
+            back='Test A',
+            next_review=timezone.now() + timedelta(days=5),
+            has_been_reviewed=True,
+            repetitions=3
+        )
+
+        response = self.client.post(
+            reverse('practice_card', args=[card.pk]),
+            data={'quality': 4},
+            content_type='application/json'
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data['success'])
+        self.assertTrue(data['practice_mode'])
+        self.assertTrue(data['correct'])  # quality >= 3 is correct
+
+    def test_practice_card_incorrect_quality(self):
+        """Practice card with low quality should show incorrect."""
+        card = Card.objects.create(
+            deck=self.deck,
+            front='Test Q',
+            back='Test A',
+            next_review=timezone.now() + timedelta(days=5),
+            has_been_reviewed=True,
+            repetitions=3
+        )
+
+        response = self.client.post(
+            reverse('practice_card', args=[card.pk]),
+            data={'quality': 2},
+            content_type='application/json'
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertFalse(data['correct'])  # quality < 3 is incorrect
+
+    def test_practice_session_with_deck_filter(self):
+        """Practice session should respect deck filter."""
+        other_deck = Deck.objects.create(name='Other Deck', owner=self.user)
+
+        # Create cards in both decks
+        Card.objects.create(
+            deck=self.deck,
+            front='Test Deck Q',
+            back='Test Deck A',
+            next_review=timezone.now() + timedelta(days=1),
+            has_been_reviewed=True,
+            repetitions=1
+        )
+        Card.objects.create(
+            deck=other_deck,
+            front='Other Deck Q',
+            back='Other Deck A',
+            next_review=timezone.now() + timedelta(days=1),
+            has_been_reviewed=True,
+            repetitions=1
+        )
+
+        # Request practice for specific deck
+        response = self.client.get(reverse('practice_session_deck', args=[self.deck.pk]))
+        self.assertEqual(response.status_code, 200)
+
+        # Cards should only be from the specified deck
+        cards = response.context['cards']
+        for card in cards:
+            self.assertEqual(card.deck, self.deck)
+
+
+class DashboardPracticeModeTests(TestCase):
+    """Tests for practice mode display on dashboard."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123'
+        )
+        self.client.login(username='testuser', password='testpass123')
+        self.deck = Deck.objects.create(name='Test Deck', owner=self.user)
+
+        from .models import UserPreferences
+        self.prefs, _ = UserPreferences.objects.get_or_create(user=self.user)
+
+    def test_dashboard_shows_practice_available(self):
+        """Dashboard should show practice_available count when cards exist."""
+        # Create a card that's not due
+        Card.objects.create(
+            deck=self.deck,
+            front='Future Q',
+            back='Future A',
+            next_review=timezone.now() + timedelta(days=1),
+            has_been_reviewed=True,
+            repetitions=1
+        )
+
+        response = self.client.get(reverse('dashboard'))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['practice_available'], 1)
+
+    def test_dashboard_shows_next_review_time(self):
+        """Dashboard should show next_review_time when cards are scheduled."""
+        future_time = timezone.now() + timedelta(hours=3)
+        Card.objects.create(
+            deck=self.deck,
+            front='Future Q',
+            back='Future A',
+            next_review=future_time,
+            has_been_reviewed=True,
+            repetitions=1
+        )
+
+        response = self.client.get(reverse('dashboard'))
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNotNone(response.context['next_review_time'])
+
+    def test_dashboard_no_practice_when_cards_due(self):
+        """Dashboard should count practice cards correctly when due cards exist."""
+        # Create a due card
+        Card.objects.create(
+            deck=self.deck,
+            front='Due Q',
+            back='Due A',
+            next_review=timezone.now() - timedelta(hours=1),
+            has_been_reviewed=True,
+            repetitions=1
+        )
+        # Create a future card
+        Card.objects.create(
+            deck=self.deck,
+            front='Future Q',
+            back='Future A',
+            next_review=timezone.now() + timedelta(days=1),
+            has_been_reviewed=True,
+            repetitions=1
+        )
+
+        response = self.client.get(reverse('dashboard'))
+        self.assertEqual(response.status_code, 200)
+        # Should show 1 due and 1 practice available
+        self.assertEqual(response.context['total_due'], 1)
+        self.assertEqual(response.context['practice_available'], 1)

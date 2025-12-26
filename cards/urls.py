@@ -35,6 +35,11 @@ urlpatterns = [
     path('review/struggling/', views.review_struggling, name='review_struggling'),
     path('api/review/<int:pk>/', views.review_card, name='review_card'),
 
+    # Practice mode (review cards early without affecting SRS)
+    path('review/practice/', views.practice_session, name='practice_session'),
+    path('review/practice/<int:deck_pk>/', views.practice_session, name='practice_session_deck'),
+    path('api/practice/<int:pk>/', views.practice_card, name='practice_card'),
+
     # Settings
     path('settings/', views.settings_view, name='settings'),
 
