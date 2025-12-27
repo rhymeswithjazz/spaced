@@ -4,18 +4,20 @@ A Django-based flashcard application with SM-2 spaced repetition algorithm for o
 
 ## Overview
 
-This is a full-featured flashcard learning application built with Django. It provides spaced repetition scheduling, deck/card management, email notifications, achievement tracking, and a modern responsive UI using TailwindCSS and Alpine.js.
+Full-featured flashcard learning application built with Django. Provides spaced repetition scheduling, deck/card management, email notifications, achievement tracking, and a modern responsive UI using TailwindCSS.
 
 ## Tech Stack
 
-- **Language**: Python 3.11
-- **Framework**: Django 5.x
-- **Database**: SQLite (easily swappable to PostgreSQL)
-- **Task Scheduling**: Supercronic (cron implementation for containers)
-- **Process Manager**: SupervisorD
-- **Container**: Docker
-- **Frontend**: TailwindCSS (CDN), Alpine.js, canvas-confetti
-- **Package Manager**: uv
+| Component | Technology |
+|-----------|------------|
+| Language | Python 3.11 |
+| Framework | Django 5.x |
+| Database | SQLite (swappable to PostgreSQL) |
+| Task Scheduling | Supercronic |
+| Process Manager | SupervisorD |
+| Container | Docker |
+| Frontend | TailwindCSS (CDN), Alpine.js, canvas-confetti |
+| Package Manager | uv |
 
 ## Project Structure
 
@@ -49,7 +51,7 @@ flashcard/
 │   │   ├── send_streak_reminders.py
 │   │   ├── send_weekly_stats.py
 │   │   ├── send_inactivity_nudges.py
-│   │   └── send_test_email.py
+│   │   ├── send_test_email.py
 │   ├── templates/cards/       # App-specific templates
 │   ├── migrations/            # Database migrations
 │   ├── srs.py                 # SM-2 spaced repetition algorithm
@@ -58,7 +60,7 @@ flashcard/
 │   ├── achievements.py        # Achievement tracking system
 │   ├── forms.py               # Form classes with styling
 │   ├── context_processors.py  # Template context injection
-│   ├── tests.py               # Test suite
+│   ├── tests.py               # Test suite (121 tests, 92% coverage)
 │   └── achievements.py
 ├── templates/                  # Shared templates
 │   ├── base.html              # Base template with theme system
@@ -127,22 +129,22 @@ Flashcard decks owned by users.
 
 Flashcards with SRS scheduling fields.
 
-| Field | Type | Description |
-|-------|------|-------------|
-| id | INT | Primary key |
-| deck | FK | Foreign key to Deck |
-| card_type | VARCHAR(20) | basic, cloze, reverse, typein |
-| front | TEXT | Front content (question) |
-| back | TEXT | Back content (answer) |
-| notes | TEXT | Optional notes |
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| id | INT | - | Primary key |
+| deck | FK | - | Foreign key to Deck |
+| card_type | VARCHAR(20) | - | basic, cloze, reverse, typein |
+| front | TEXT | - | Front content (question) |
+| back | TEXT | - | Back content (answer) |
+| notes | TEXT | - | Optional notes |
 | ease_factor | REAL | 2.5 | SM-2 ease factor |
 | interval | INT | 0 | Days until next review |
 | repetitions | INT | 0 | Successful review count |
-| next_review | DATETIME | When card is due |
-| last_reviewed | DATETIME | Last review timestamp |
-| has_been_reviewed | BOOL | Has been reviewed before |
-| created_at | DATETIME | Creation timestamp |
-| updated_at | DATETIME | Last update timestamp |
+| next_review | DATETIME | - | When card is due |
+| last_reviewed | DATETIME | - | Last review timestamp |
+| has_been_reviewed | BOOL | FALSE | Has been reviewed before |
+| created_at | DATETIME | - | Creation timestamp |
+| updated_at | DATETIME | - | Last update timestamp |
 
 ### ReviewLog
 
@@ -188,6 +190,7 @@ Email sending history for deduplication.
 
 | Field | Type | Description |
 |-------|------|-------------|
+| id | INT | Primary key |
 | user | FK | Foreign key to User |
 | email_type | VARCHAR(30) | Type of email sent |
 | subject | VARCHAR(200) | Email subject |
@@ -199,6 +202,7 @@ Tracks scheduled command runs.
 
 | Field | Type | Description |
 |-------|------|-------------|
+| id | INT | Primary key |
 | command_name | VARCHAR(100) | Command name |
 | status | VARCHAR(20) | success, failed, partial |
 | users_processed | INT | Users processed |
@@ -265,9 +269,16 @@ self.has_been_reviewed = True
 self.save()
 ```
 
-## Cloze Deletion Syntax
+## Card Types
 
-Cards support cloze deletions with the following syntax:
+| Type | Description | Front/Back |
+|------|-------------|------------|
+| **basic** | Standard front/back card | Question / Answer |
+| **cloze** | Text with fill-in-the-blank | Partial text / Full text |
+| **reverse** | Both directions reviewed | Auto-generates paired card |
+| **typein** | User types exact answer | Question / Expected answer |
+
+### Cloze Deletion Syntax
 
 ```
 {{c1::answer}}              # Simple cloze
@@ -275,31 +286,87 @@ Cards support cloze deletions with the following syntax:
 {{c1::word1}} and {{c2::word2}}  # Multiple deletions
 ```
 
-Multiple clozes in a card become separate review items, allowing selective testing of each deletion.
+Multiple clozes in a card become separate review items.
 
-## Authentication Flow
+### Type-in Cards
 
-### Registration
+Type-in cards require exact text input (case-insensitive). Used for spelling practice or precise answer recall.
 
-1. User submits registration form
-2. User created as inactive (is_active=False)
-3. EmailVerificationToken generated
-4. Verification email sent
-5. Redirect to verification sent page
+### Reverse Cards
 
-### Email Verification
+Reverse cards automatically generate a paired card with front/back swapped. Both directions are scheduled independently using SRS.
 
-1. User clicks verification link
-2. Token expiration checked (24 hours)
-3. If valid: set user.is_active=True, delete token
-4. Redirect to login
+## Review Session Flow
 
-### Login
+### Session Initiation
 
-1. Django authentication
-2. Session created
-3. Preferences synced from database
-4. Redirect to dashboard
+1. User clicks "Review" on dashboard or deck
+2. View fetches due cards:
+   - `next_review <= now`
+   - `has_been_reviewed = True` (for new cards, shows in learning mode)
+
+### Card Selection
+
+1. Get due cards (cards ready for review)
+2. Apply `new_cards_per_day` limit (default: 20)
+3. Apply `max_reviews_per_session` limit (0 = unlimited)
+4. Shuffle combined list
+
+### Card Presentation
+
+1. Front side shown (question)
+2. User presses Space or clicks to reveal
+3. Rating buttons appear
+
+### Rating Submission
+
+1. POST to `/api/review/<id>/` with quality (1-4)
+2. SRS algorithm updates scheduling
+3. ReviewLog created
+4. Streak updated
+5. Achievements checked
+
+### Session Completion
+
+1. Stats shown (cards reviewed, time taken)
+2. Celebration confetti (if enabled)
+3. Options to continue or return
+
+### Review Modes
+
+| Mode | Purpose | Behavior |
+|------|---------|----------|
+| **Standard** | Normal review | SRS scheduling applied |
+| **Struggling** | Cards with EF < 2.0 | 20 card fixed session |
+| **Practice** | Early review | No SRS update, streak counts |
+
+Struggling mode is automatically suggested when many cards have low ease factors.
+
+## Deck Import/Export
+
+### Export Format
+
+```json
+{
+  "name": "Deck Name",
+  "description": "Optional description",
+  "cards": [
+    {
+      "card_type": "basic|cloze|reverse|typein",
+      "front": "Question or cloze text",
+      "back": "Answer",
+      "notes": "Optional notes"
+    }
+  ]
+}
+```
+
+### Import Process
+
+1. Validate JSON structure
+2. Create deck with name/description
+3. Create cards in batch
+4. Return import summary with success/failure counts
 
 ## Theme System
 
@@ -334,8 +401,8 @@ def user_preferences(request):
 
 ### Email Types
 
-| Type | Purpose | Frequency |
-|------|---------|-----------|
+| Type | Purpose | Default Frequency |
+|------|---------|-------------------|
 | verification | Email verification | Once |
 | study_reminder | Daily cards due | Daily |
 | streak_reminder | Streak at risk | Hourly (noon-10pm) |
@@ -345,7 +412,7 @@ def user_preferences(request):
 
 ### Branded Email System
 
-Theme-aware emails using user's stored preference. Includes:
+Theme-aware emails using user's stored preference:
 - Logo inline image
 - Light/dark color schemes
 - Plain text fallback
@@ -372,51 +439,76 @@ Theme-aware emails using user's stored preference. Includes:
 0 10 * * * cd /app && uv run python manage.py send_inactivity_nudges
 ```
 
-## Review Session Flow
+## Authentication Flow
 
-1. **Session Initiation**
-   - User clicks "Review" on dashboard or deck
-   - View fetches due cards (reviewed before, next_review <= now)
+### Registration
 
-2. **Card Selection**
-   - Get due cards
-   - Apply new_cards_per_day limit
-   - Apply max_reviews_per_session limit
-   - Shuffle combined list
+1. User submits registration form
+2. User created as inactive (`is_active=False`)
+3. EmailVerificationToken generated
+4. Verification email sent
+5. Redirect to verification sent page
 
-3. **Card Presentation**
-   - Front side shown (question)
-   - User presses Space to reveal
-   - Rating buttons appear
+### Email Verification
 
-4. **Rating Submission**
-   - POST to `/api/review/<id>/` with quality
-   - SRS algorithm updates scheduling
-   - ReviewLog created
-   - Streak updated
-   - Achievements checked
+1. User clicks verification link
+2. Token expiration checked (24 hours)
+3. If valid: set `user.is_active=True`, delete token
+4. Redirect to login
 
-5. **Session Completion**
-   - Stats shown
-   - Celebration confetti
-   - Options to continue or return
+### Login
 
-### Review Modes
+1. Django authentication
+2. Session created
+3. Preferences synced from database
+4. Redirect to dashboard
 
-| Mode | Purpose | Behavior |
-|------|---------|----------|
-| Standard | Normal review | SRS scheduling applied |
-| Struggling | Cards with EF < 2.0 | 20 card fixed session |
-| Practice | Early review | No SRS update, streak counts |
+## Achievement System
 
-### Card Types
+Achievements are tracked in `cards/achievements.py`. Each achievement has:
+- Name and description
+- Condition function
+- Points value (optional)
 
-| Type | Description |
-|------|-------------|
-| Basic | Standard front/back card |
-| Cloze | Text with fill-in-the-blank |
-| Reverse | Both directions reviewed |
-| Type-in | User types answer |
+### Built-in Achievements
+
+| Achievement | Condition |
+|-------------|-----------|
+| First Steps | Complete first review |
+| Week Warrior | 7-day streak |
+| Card Collector | Create 100 cards |
+| Review Master | Complete 1000 reviews |
+| Perfect Session | 100% accuracy in session |
+
+### Checking Achievements
+
+Achievements are checked after each review:
+- Load user's unlocked achievements
+- Check each achievement condition
+- Send notification email for new unlocks
+
+## API Endpoints
+
+### Review API
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/review/<id>/` | POST | Submit card review |
+| `/api/practice/<id>/` | POST | Practice review (no SRS) |
+
+### Theme API
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/theme/` | POST | Sync theme preference |
+| `/api/theme/get/` | GET | Get theme preference |
+
+### Deck API
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/deck/<id>/export/` | GET | Export deck as JSON |
+| `/deck/<id>/import/` | POST | Import cards from JSON |
 
 ## Frontend Architecture
 
@@ -448,22 +540,6 @@ Theme-aware emails using user's stored preference. Includes:
 | canvas-confetti | Celebrations | jsDelivr |
 | Google Fonts | Typography | Google Fonts |
 
-## API Endpoints
-
-### Review API
-
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/api/review/<id>/` | POST | Submit card review |
-| `/api/practice/<id>/` | POST | Practice review |
-
-### Theme API
-
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/api/theme/` | POST | Sync theme preference |
-| `/api/theme/get/` | GET | Get theme preference |
-
 ## Deployment Architecture
 
 ### Docker
@@ -480,10 +556,11 @@ Theme-aware emails using user's stored preference. Includes:
 
 ### Data Persistence
 
-- **Volume Mounts**:
-  - `/app/data` - SQLite database
-  - `/app/logs` - Application logs
-  - `/app/static` - Collected static files
+| Mount Point | Purpose |
+|-------------|---------|
+| `/app/data` | SQLite database |
+| `/app/logs` | Application logs |
+| `/app/static` | Collected static files |
 
 ### Logging
 
@@ -513,3 +590,39 @@ Two log handlers configured:
 3. **Achievements**: Add new achievements in `achievements.py`
 4. **Card Types**: Extend card_type choices in models
 5. **Email Types**: Extend email system with new types
+
+## Development Commands
+
+```bash
+# Install dependencies
+uv sync
+
+# Run development server
+uv run python manage.py runserver
+
+# Run migrations
+uv run python manage.py migrate
+
+# Create new migrations after model changes
+uv run python manage.py makemigrations cards
+
+# Create superuser
+uv run python manage.py createsuperuser
+
+# Check for issues
+uv run python manage.py check
+
+# Run tests
+uv run python manage.py test cards
+
+# Run tests with coverage
+uv run coverage run --source='cards' manage.py test cards
+uv run coverage report -m
+
+# Send email reminders (run via cron)
+uv run python manage.py send_reminders
+
+# Docker deployment
+docker compose up -d
+docker compose exec web uv run python manage.py migrate
+```
