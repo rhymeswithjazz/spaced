@@ -182,7 +182,7 @@
         defaultTextSize: '{{ text_size }}',
         celebrationAnimations: {{ celebration_animations|yesno:"true,false" }},
         csrfToken: '{{ csrf_token }}',
-        practiceMode: {{ practice_mode|default:"false"|yesno:"true,false" }}
+        practiceMode: {% if practice_mode %}true{% else %}false{% endif %}
     });
 </script>
 {% endblock %}
