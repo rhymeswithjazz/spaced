@@ -1,6 +1,7 @@
 import secrets
 import uuid
 import zoneinfo
+from datetime import timedelta
 
 from django.db import models
 from django.contrib.auth.models import User
@@ -271,7 +272,7 @@ class UserPreferences(models.Model):
         elif self.last_study_date == today:
             # Already studied today, no change needed
             pass
-        elif self.last_study_date == today - timezone.timedelta(days=1):
+        elif self.last_study_date == today - timedelta(days=1):
             # Studied yesterday, extend streak
             self.current_streak += 1
             self.last_study_date = today

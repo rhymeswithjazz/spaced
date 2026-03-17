@@ -40,3 +40,4 @@ Use `cards/forms.py` `StyledFormMixin` for consistent input styling. Select drop
 ## Code References
 
 When referencing code, use `file_path:line_number` format.
+Use 'bd' for task tracking

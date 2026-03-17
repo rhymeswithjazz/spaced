@@ -1810,6 +1810,25 @@ class DashboardStreakTests(TestCase):
         response = self.client.get(reverse('dashboard'))
         self.assertEqual(response.context['streak'], 2)  # Not 4
 
+    def test_streak_across_year_boundary(self):
+        """Streak should continue across year boundary (Dec 31 -> Jan 1)."""
+        from unittest.mock import patch
+        from datetime import date
+
+        # Simulate Dec 31, 2025
+        dec_31 = date(2025, 12, 31)
+
+        # Set streak state as if user studied on Dec 31
+        self._set_streak_state(current_streak=10, longest_streak=10, last_study_date=dec_31)
+
+        # Simulate Jan 1, 2026 - user views dashboard
+        jan_1 = date(2026, 1, 1)
+        with patch('cards.views.dashboard.get_user_local_date', return_value=jan_1):
+            response = self.client.get(reverse('dashboard'))
+            # Streak should still be 10 (studied yesterday)
+            self.assertEqual(response.context['streak'], 10)
+            self.assertEqual(response.context['longest_streak'], 10)
+
     def test_dashboard_shows_retention_rate(self):
         """Dashboard should calculate retention rate correctly."""
         # Create 4 reviews: 3 correct (quality >= 3), 1 wrong
